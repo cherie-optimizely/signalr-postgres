@@ -1,0 +1,20 @@
+-- Database needs to be created beforehand manually
+-- CREATE DATABASE "SignalRCore";
+
+-- Create schema
+CREATE SCHEMA IF NOT EXISTS "SignalR";
+
+-- Create tables
+CREATE TABLE IF NOT EXISTS "SignalR"."Messages" (
+    "PayloadId" SERIAL PRIMARY KEY, -- Auto-incrementing integer for payload ID
+    "Payload" VARCHAR,
+    "InsertedOn" TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS "SignalR"."Messages_Id" (
+    "PayloadId" INT PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS "SignalR"."Schema" (
+    "SchemaVersion" INT PRIMARY KEY
+);
