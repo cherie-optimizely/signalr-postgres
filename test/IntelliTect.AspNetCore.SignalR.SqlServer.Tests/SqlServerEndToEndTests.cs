@@ -15,8 +15,9 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
     public class SqlServerEndToEndTests
     {
         private const string databaseName = "SignalRUnitTestsDb";
+        private const string password = "<to-be-replaced>";
         private const string connectionString = 
-            "Server=localhost;Database=" + databaseName + ";Trusted_Connection=True;Timeout=5;TrustServerCertificate=True";
+            "Server=localhost,1433;Database=" + databaseName + ";User Id=sa;Password=" + password + ";TrustServerCertificate=true";
 
         [SkippableFact]
         public async Task CanSendAndReceivePayloads_WithServiceBroker()
