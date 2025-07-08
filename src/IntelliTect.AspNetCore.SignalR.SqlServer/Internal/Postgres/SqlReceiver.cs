@@ -1,17 +1,11 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Threading;
-using System.Threading.Tasks;
-using IntelliTect.AspNetCore.SignalR.SqlServer;
 using Microsoft.Extensions.Logging;
-using Microsoft.Data.SqlClient;
+using Microsoft.VisualBasic;
+using Npgsql;
 
 namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
 {
@@ -37,7 +31,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         private readonly ILogger _logger;
         private readonly string _tracePrefix;
 
-        private long? _lastPayloadId = null;
+        private int? _lastPayloadId = null;
         private Func<long, byte[], Task>? _onReceived = null;
         private bool _disposed;
         private readonly string _maxIdSql = "SELECT [PayloadId] FROM [{0}].[{1}_Id]";
@@ -80,9 +74,9 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
 
             if (_cts.IsCancellationRequested) return;
 
-            if (_options.Mode.HasFlag(SqlServerMessageMode.ServiceBroker) && StartSqlDependencyListener())
+            if (_options.Mode.HasFlag(SqlServerMessageMode.ServiceBroker))// && StartSqlDependencyListener())
             {
-                await NotificationLoop(_cts.Token);
+                throw new NotImplementedException("Service Broker mode is not yet implemented for Postgres.");
             }
             else if (_options.Mode.HasFlag(SqlServerMessageMode.Polling))
             {
@@ -97,99 +91,10 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         /// <summary>
         /// Loop until cancelled, using SQL service broker notifications to watch for new rows.
         /// </summary>
-        private async Task NotificationLoop(CancellationToken cancellationToken)
-        {
-            while (!_notificationsDisabled)
-            {
-                if (cancellationToken.IsCancellationRequested) return;
-
-                try
-                {
-                    _logger.LogDebug("{HubStream}: Setting up SQL notification", _tracePrefix);
-
-                    var tcs = new TaskCompletionSource<SqlNotificationEventArgs>();
-                    var cancelReg = cancellationToken.Register((t) => ((TaskCompletionSource<SqlNotificationEventArgs>)t!).TrySetCanceled(), tcs);
-                    var recordCount = await ReadRows(command =>
-                    {
-                        var dependency = new SqlDependency(command, null, (int)_dependencyTimeout.TotalSeconds);
-                        dependency.OnChange += (o, e) => tcs.SetResult(e);
-                    });
-
-                    if (recordCount > 0)
-                    {
-                        // If we got one message, there might be more coming right after.
-                        // Keep consuming as fast as we can until we stop getting more messages.
-                        while (recordCount > 0)
-                        {
-                            recordCount = await ReadRows(null);
-                        }
-
-                        _logger.LogDebug("{HubStream}: Records were returned by the command that sets up the SQL notification, restarting the receive loop", _tracePrefix);
-                        continue;
-                    }
-
-                    _logger.LogTrace("{HubStream}: No records received while setting up SQL notification", _tracePrefix);
-
-                    var depResult = await tcs.Task;
-                    cancelReg.Dispose();
-                    if (cancellationToken.IsCancellationRequested) return;
-
-                    // Check notification args for issues
-                    switch (depResult.Type)
-                    {
-                        case SqlNotificationType.Change when depResult.Info is SqlNotificationInfo.Update:
-                            // Typically means new records are available. (TODO: verify this?).
-                            // Loop again to pick them up by performing another query.
-                            _logger.LogTrace("{HubStream}: SQL notification details: Type={1}, Source={2}, Info={3}", _tracePrefix, depResult.Type, depResult.Source, depResult.Info);
-
-                            // Read rows immediately, since on the next loop we know for certain there will be rows.
-                            // There's no point doing a full loop that includes setting up a SqlDependency that
-                            // will go unused due to the fact that we pulled back rows.
-                            do
-                            {
-                                recordCount = await ReadRows(null);
-                            } while (recordCount > 0);
-                            continue;
-
-                        case SqlNotificationType.Change when depResult.Source is SqlNotificationSource.Timeout:
-                            // Expected while there is no activity. We put a timeout on our SqlDependency so they're not running infinitely.
-                            _logger.LogTrace("{HubStream}: SQL notification timed out (this is expected every {1} seconds)", _tracePrefix, _dependencyTimeout.TotalSeconds);
-                            break;
-
-                        case SqlNotificationType.Change:
-                            throw new InvalidOperationException($"Unexpected SQL notification Type={depResult.Type}, Source={depResult.Source}, Info={depResult.Info}");
-
-                        case SqlNotificationType.Subscribe:
-                            _logger.LogError("{HubStream}: SQL notification subscription error: Type={1}, Source={2}, Info={3}", _tracePrefix, depResult.Type, depResult.Source, depResult.Info);
-
-                            if (depResult.Info == SqlNotificationInfo.TemplateLimit)
-                            {
-                                // We've hit a subscription limit, pause for a bit then start again
-                                await Task.Delay(2000, cancellationToken);
-                            }
-                            else
-                            {
-                                // Unknown subscription error, let's stop using query notifications
-                                _notificationsDisabled = true;
-                                await StartLoop();
-                                return;
-                            }
-                            break;
-                    }
-                }
-                catch (TaskCanceledException) { return; }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "{HubStream}: Error in SQL notification loop", _tracePrefix);
-
-                    await Task.Delay(1000, cancellationToken);
-                    continue;
-                }
-            }
-
-            _logger.LogDebug("{HubStream}: SQL notification loop fell out", _tracePrefix);
-            await StartLoop();
-        }
+        // private async Task NotificationLoop(CancellationToken cancellationToken)
+        // {
+           
+        // }
 
         /// <summary>
         /// Loop until cancelled, using periodic queries to watch for new rows.
@@ -254,21 +159,21 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         /// <summary>
         /// Fetch the starting payloadID that will be used to query for newer messages.
         /// </summary>
-        private async Task<long> GetLastPayloadId()
+        private async Task<int> GetLastPayloadId()
         {
             try
-            {
-                using var connection = new SqlConnection(_options.ConnectionString);
-                using var command = new SqlCommand
-                {
-                    Connection = connection,
-                    CommandText = _maxIdSql,
-                };
-                await connection.OpenAsync();
+        {
+                var dataSourceBuilder = new NpgsqlDataSourceBuilder(_options.ConnectionString);
+                var dataSource = dataSourceBuilder.Build();
 
-                var id = await command.ExecuteScalarAsync();
-                if (id is null) throw new Exception($"Unable to retrieve the starting payload ID for {_tableName}");
-                return (long)id;
+                var connection = await dataSource.OpenConnectionAsync();
+
+                await using (var command = new NpgsqlCommand("SELECT max(\"PayloadId\") FROM \"SignalR\".\"Messages\";", connection))
+                {
+                    var id = await command.ExecuteScalarAsync();
+                    if (id is null) throw new Exception($"Unable to retrieve the starting payload ID for table \"Messages\"");
+                    return (int) id;
+                }
             }
             catch (Exception ex)
             {
@@ -282,24 +187,21 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         /// </summary>
         /// <param name="beforeExecute"></param>
         /// <returns></returns>
-        private async Task<int> ReadRows(Action<SqlCommand>? beforeExecute)
+        private async Task<int> ReadRows(Action<NpgsqlCommand>? beforeExecute)
         {
-            using var connection = new SqlConnection(_options.ConnectionString);
-            using var command = new SqlCommand
-            {
-                Connection = connection,
-                CommandText = _selectSql,
-            };
-            command.Parameters.Add(new SqlParameter("PayloadId", _lastPayloadId));
-            await connection.OpenAsync();
-
-            beforeExecute?.Invoke(command);
-
-            // Fetch any rows that might already be available after the last PayloadId.
-            var reader = await command.ExecuteReaderAsync();
             var recordCount = 0;
 
-            while (reader.Read())
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(_options.ConnectionString);
+            var dataSource = dataSourceBuilder.Build();
+
+            var connection = await dataSource.OpenConnectionAsync();
+
+
+            await using var command = dataSource.CreateCommand("SELECT \"PayloadId\", \"Payload\", \"InsertedOn\" FROM \"SignalR\".\"Messages\" WHERE \"PayloadId\" > (@p);");
+            command.Parameters.AddWithValue("p", _lastPayloadId ?? 0);
+            await using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
             {
                 recordCount++;
                 await ProcessRecord(reader);
@@ -314,8 +216,8 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         /// <param name="record"></param>
         private async Task ProcessRecord(IDataRecord record)
         {
-            var id = record.GetInt64(0);
-            var payload = ((SqlDataReader)record).GetSqlBinary(1);
+            var id = record.GetInt32(0);
+            var payload = ((NpgsqlDataReader)record)[1] as byte[]; // Assuming the payload is a byte array
 
             _logger.LogTrace("{HubStream}: SqlReceiver last payload ID={1}, new payload ID={2}", _tracePrefix, _lastPayloadId, id);
 
@@ -334,7 +236,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
 
             _logger.LogTrace("{HubStream}: Payload {1} received", _tracePrefix, id);
 
-            await _onReceived!.Invoke(id, (byte[]?)payload ?? Array.Empty<byte>());
+            await _onReceived!.Invoke(id, payload ?? Array.Empty<byte>());
         }
 
         /// <summary>
@@ -342,57 +244,57 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         /// returning a boolean indicating success. If false, SQL notifications cannot be used.
         /// </summary>
         /// <returns></returns>
-        private bool StartSqlDependencyListener()
-        {
-            if (_notificationsDisabled)
-            {
-                return false;
-            }
+        // private bool StartSqlDependencyListener()
+        // {
+        //     if (_notificationsDisabled)
+        //     {
+        //         return false;
+        //     }
 
-            _logger.LogTrace("{HubStream}: Starting SQL notification listener", _tracePrefix);
-            try
-            {
-                if (SqlDependency.Start(_options.ConnectionString))
-                {
-                    _logger.LogTrace("{HubStream}: SQL notification listener started", _tracePrefix);
-                }
-                else
-                {
-                    _logger.LogTrace("{HubStream}: SQL notification listener was already running", _tracePrefix);
-                }
-                return true;
-            }
-            catch (InvalidOperationException)
-            {
-                _logger.LogWarning("{HubStream}: SQL Service Broker is disabled on the target database.", _tracePrefix);
-                _notificationsDisabled = true;
-                return false;
-            }
-            catch (NullReferenceException)
-            {
-                // Workaround for https://github.com/dotnet/SqlClient/issues/1264
+        //     _logger.LogTrace("{HubStream}: Starting SQL notification listener", _tracePrefix);
+        //     try
+        //     {
+        //         if (SqlDependency.Start(_options.ConnectionString))
+        //         {
+        //             _logger.LogTrace("{HubStream}: SQL notification listener started", _tracePrefix);
+        //         }
+        //         else
+        //         {
+        //             _logger.LogTrace("{HubStream}: SQL notification listener was already running", _tracePrefix);
+        //         }
+        //         return true;
+        //     }
+        //     catch (InvalidOperationException)
+        //     {
+        //         _logger.LogWarning("{HubStream}: SQL Service Broker is disabled on the target database.", _tracePrefix);
+        //         _notificationsDisabled = true;
+        //         return false;
+        //     }
+        //     catch (NullReferenceException)
+        //     {
+        //         // Workaround for https://github.com/dotnet/SqlClient/issues/1264
 
-                _logger.LogWarning("{HubStream}: SQL Service Broker is disabled or unsupported by the target database.", _tracePrefix);
-                _notificationsDisabled = true;
-                return false;
-            }
-            catch (SqlException ex) when (ex.Number == 40510 || ex.Message.Contains("not supported"))
-            {
-                // Workaround for https://github.com/dotnet/SqlClient/issues/1264.
-                // Specifically that Azure SQL Database reports that service broker is enabled,
-                // even though it is entirely unsupported.
+        //         _logger.LogWarning("{HubStream}: SQL Service Broker is disabled or unsupported by the target database.", _tracePrefix);
+        //         _notificationsDisabled = true;
+        //         return false;
+        //     }
+        //     catch (SqlException ex) when (ex.Number == 40510 || ex.Message.Contains("not supported"))
+        //     {
+        //         // Workaround for https://github.com/dotnet/SqlClient/issues/1264.
+        //         // Specifically that Azure SQL Database reports that service broker is enabled,
+        //         // even though it is entirely unsupported.
 
-                _logger.LogWarning("{HubStream}: SQL Service Broker is unsupported by the target database.", _tracePrefix);
-                _notificationsDisabled = true;
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "{HubStream}: Error starting SQL notification listener", _tracePrefix);
+        //         _logger.LogWarning("{HubStream}: SQL Service Broker is unsupported by the target database.", _tracePrefix);
+        //         _notificationsDisabled = true;
+        //         return false;
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogError(ex, "{HubStream}: Error starting SQL notification listener", _tracePrefix);
 
-                return false;
-            }
-        }
+        //         return false;
+        //     }
+        // }
 
         public void Dispose()
         {

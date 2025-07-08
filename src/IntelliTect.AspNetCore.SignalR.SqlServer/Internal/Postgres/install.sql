@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS "SignalR"."Messages" (
     "InsertedOn" TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- The following are not in use
 CREATE TABLE IF NOT EXISTS "SignalR"."Messages_Id" (
     "PayloadId" INT PRIMARY KEY
 );
