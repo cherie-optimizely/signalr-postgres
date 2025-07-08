@@ -4,7 +4,7 @@
 using System;
 using Microsoft.AspNetCore.SignalR;
 using IntelliTect.AspNetCore.SignalR.SqlServer;
-using IntelliTect.AspNetCore.SignalR.SqlServer.Internal;
+using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.SqlServer;
 
 namespace Microsoft.Extensions.DependencyInjection
 {

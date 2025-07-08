@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
+namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
 {
     internal class SqlSender
     {

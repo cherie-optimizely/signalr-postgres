@@ -8,7 +8,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
+namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.SqlServer
 {
     internal class SqlInstaller(SqlServerOptions options, ILogger logger, string messagesTableNamePrefix, string tracePrefix)
     {

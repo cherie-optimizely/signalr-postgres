@@ -1,3 +1,1 @@
-﻿
---
-INSERT INTO "SignalR"."Messages" ("Payload") VALUES (@payload);
+﻿INSERT INTO "SignalR"."Messages" ("Payload") VALUES (@payload);

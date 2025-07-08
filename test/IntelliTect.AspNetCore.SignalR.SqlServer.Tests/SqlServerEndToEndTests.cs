@@ -1,4 +1,4 @@
-﻿using IntelliTect.AspNetCore.SignalR.SqlServer.Internal;
+﻿using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.SqlServer;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;

@@ -5,6 +5,7 @@ using System.Globalization;
 using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Messages;
 using Microsoft.AspNetCore.SignalR.Protocol;
 using IntelliTect.AspNetCore.SignalR.SqlServer.Internal;
+using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.SqlServer;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.SignalR;

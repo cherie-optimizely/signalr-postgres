@@ -1,7 +1,6 @@
 using IntelliTect.AspNetCore.SignalR.SqlServer.Internal;
 using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Messages;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.AspNetCore.SignalR.Internal;
 using Microsoft.AspNetCore.SignalR.Protocol;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
