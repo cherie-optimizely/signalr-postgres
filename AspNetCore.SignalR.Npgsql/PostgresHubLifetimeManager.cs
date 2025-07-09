@@ -29,6 +29,11 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
     
     private readonly AckHandler _ackHandler;
     private int _internalId;
+    
+    private volatile bool _isInitialized = false;
+    private readonly SemaphoreSlim _initSemaphore = new(1, 1);
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly NpgsqlDataSource _dataSource;
 
     public PostgresHubLifetimeManager(
         ILogger<PostgresHubLifetimeManager<THub>> logger, 
@@ -41,6 +46,12 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         _logger = logger;
         _options = options;
         _ackHandler = new AckHandler();
+        
+        // Validate required options
+        if (string.IsNullOrEmpty(_options.Value.ConnectionString))
+            throw new InvalidOperationException("ConnectionString is required");
+            
+        _dataSource = NpgsqlDataSource.Create(_options.Value.ConnectionString);
         
         if (globalHubOptions != null && hubOptions != null)
         {
@@ -58,20 +69,28 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
     /// <inheritdoc />
     public override async Task OnConnectedAsync(HubConnectionContext connection)
     {
-        await EnsurePostgresInitializedAsync();
-        var feature = new SqlFeature();
-        connection.Features.Set<ISqlFeature>(feature);
-
-        var userTask = Task.CompletedTask;
-
-        _connections.Add(connection);
-
-        if (!string.IsNullOrEmpty(connection.UserIdentifier))
+        try
         {
-            userTask = _users.AddSubscriptionAsync(connection.UserIdentifier, connection);
-        }
+            await EnsurePostgresInitializedAsync();
+            var feature = new SqlFeature();
+            connection.Features.Set<ISqlFeature>(feature);
 
-        await userTask;
+            var userTask = Task.CompletedTask;
+
+            _connections.Add(connection);
+
+            if (!string.IsNullOrEmpty(connection.UserIdentifier))
+            {
+                userTask = _users.AddSubscriptionAsync(connection.UserIdentifier, connection);
+            }
+
+            await userTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during connection setup for connection {ConnectionId}", connection.ConnectionId);
+            throw;
+        }
     }
     
     /// <inheritdoc />
@@ -236,7 +255,14 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
     
     public void Dispose()
     {
-        throw new NotImplementedException();
+        if (!_cancellationTokenSource.IsCancellationRequested)
+        {
+            _cancellationTokenSource.Cancel();
+        }
+        
+        _cancellationTokenSource.Dispose();
+        _initSemaphore.Dispose();
+        _dataSource.Dispose();
     }
     
     private async Task SendGroupActionAndWaitForAck(string connectionId, string groupName, GroupAction action)
@@ -282,107 +308,160 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
     
     private async Task EnsurePostgresInitializedAsync()
     {
-        await using var dataSource = NpgsqlDataSource.Create(_options.Value.ConnectionString);
-
-        var notificationChannel = _options.Value.NotificationChannel;
-        // Ensure schema exists and create message table in a single command
-        var schema = _options.Value.SchemaName;
-        var tableName = $"{_options.Value.TableSlugGenerator(typeof(THub))}_Messages";
-        var createSchemaAndTableSql = $@"
-            CREATE SCHEMA IF NOT EXISTS ""{schema}"";
-            CREATE TABLE IF NOT EXISTS ""{schema}"".""{tableName}"" (
-                ""Id"" SERIAL PRIMARY KEY,
-                ""Payload"" BYTEA NOT NULL,
-                ""InsertedOn"" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-            );
-            -- Create a function to notify on new product inserts
-            CREATE OR REPLACE FUNCTION notify_""{tableName}""_change()
-            RETURNS TRIGGER AS $$
-            BEGIN
-                PERFORM pg_notify('{notificationChannel}', json_build_object(
-                    'id', NEW.id,
-                    'Payload', NEW.Payload,
-                    'InsertedOn', NEW.InsertedOn
-                )::text);
-                RETURN NEW;
-            END;
-            $$ LANGUAGE plpgsql;
-
-            -- Create a trigger that calls the function after each insert
-            CREATE TRIGGER ""{tableName}""_insert_trigger
-            AFTER INSERT ON ""{schema}"".""{tableName}""
-            FOR EACH ROW
-            EXECUTE FUNCTION notify_""{tableName}""_change();
-            ";
+        if (_isInitialized) return;
         
-        await using var cmd = dataSource.CreateCommand(createSchemaAndTableSql);
-        await cmd.ExecuteNonQueryAsync();
+        await _initSemaphore.WaitAsync(_cancellationTokenSource.Token);
+        try
+        {
+            if (_isInitialized) return;
 
-        await Task.Run(() => Task.FromResult(ListenForNotifications(_notificationChannel)));
-        await Task.Run(() => Task.FromResult(ProcessNotifications(_notificationChannel.Reader)));
+            var notificationChannel = _options.Value.NotificationChannel;
+            // Ensure schema exists and create message table in a single command
+            var schema = _options.Value.SchemaName;
+            var tableName = $"{_options.Value.TableSlugGenerator(typeof(THub))}_Messages";
+            var createSchemaAndTableSql = $@"
+                CREATE SCHEMA IF NOT EXISTS ""{schema}"";
+                CREATE TABLE IF NOT EXISTS ""{schema}"".""{tableName}"" (
+                    ""Id"" SERIAL PRIMARY KEY,
+                    ""Payload"" BYTEA NOT NULL,
+                    ""InsertedOn"" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                
+                -- Drop existing trigger and function if they exist
+                DROP TRIGGER IF EXISTS ""{tableName}""_insert_trigger ON ""{schema}"".""{tableName}"";
+                DROP FUNCTION IF EXISTS notify_""{tableName}""_change();
+                
+                -- Create a function to notify on new message inserts
+                CREATE OR REPLACE FUNCTION notify_""{tableName}""_change()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                    PERFORM pg_notify('{notificationChannel}', json_build_object(
+                        'Id', NEW.""Id"",
+                        'Payload', encode(NEW.""Payload"", 'base64'),
+                        'InsertedOn', NEW.""InsertedOn""
+                    )::text);
+                    RETURN NEW;
+                END;
+                $$ LANGUAGE plpgsql;
 
+                -- Create a trigger that calls the function after each insert
+                CREATE TRIGGER ""{tableName}""_insert_trigger
+                AFTER INSERT ON ""{schema}"".""{tableName}""
+                FOR EACH ROW
+                EXECUTE FUNCTION notify_""{tableName}""_change();
+                ";
+            
+            await using var cmd = _dataSource.CreateCommand(createSchemaAndTableSql);
+            await cmd.ExecuteNonQueryAsync(_cancellationTokenSource.Token);
+
+            // Start background tasks
+            _ = Task.Run(() => ListenForNotifications(_notificationChannel.Writer, _cancellationTokenSource.Token), _cancellationTokenSource.Token);
+            _ = Task.Run(() => ProcessNotifications(_notificationChannel.Reader, _cancellationTokenSource.Token), _cancellationTokenSource.Token);
+
+            _isInitialized = true;
+        }
+        finally
+        {
+            _initSemaphore.Release();
+        }
     }
 
-    private async Task ListenForNotifications(ChannelWriter<Notification> writer)
+    private async Task ListenForNotifications(ChannelWriter<Notification> writer, CancellationToken cancellationToken)
     {
-        await using var conn = new NpgsqlConnection(_options.Value.ConnectionString);
-        conn.Notification += (_, args) =>
+        try
         {
-            Console.WriteLine($"[Listener] Received notification on channel '{args.Channel}' from PID {args.PID}. Payload: {args.Payload}");
-            if (args.Channel == _options.Value.NotificationChannel)
+            await using var conn = new NpgsqlConnection(_options.Value.ConnectionString);
+            conn.Notification += (_, args) =>
+            {
+                Console.WriteLine($"[Listener] Received notification on channel '{args.Channel}' from PID {args.PID}. Payload: {args.Payload}");
+                if (args.Channel == _options.Value.NotificationChannel)
+                {
+                    try
+                    {
+                        // Parse the JSON payload that contains base64 encoded binary data
+                        using var doc = JsonDocument.Parse(args.Payload);
+                        var root = doc.RootElement;
+                        
+                        var id = root.GetProperty("Id").GetInt32();
+                        var payloadBase64 = root.GetProperty("Payload").GetString();
+                        var insertedOn = root.GetProperty("InsertedOn").GetDateTime();
+                        
+                        if (payloadBase64 != null)
+                        {
+                            var payloadBytes = Convert.FromBase64String(payloadBase64);
+                            var message = new Message(id, payloadBytes, insertedOn);
+                            writer.TryWrite(new Notification(message, args.Channel, args.PID));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[Listener Error] Failed to deserialize payload: {args.Payload}. Error: {ex.Message}");
+                    }
+                }
+            };
+
+            await conn.OpenAsync(cancellationToken);
+            Console.WriteLine("[Listener] Connection opened. Sending LISTEN command...");
+
+            // Send the LISTEN command
+            await using (var cmd = new NpgsqlCommand($"LISTEN {_options.Value.NotificationChannel}", conn))
+            {
+                await cmd.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            Console.WriteLine($"[Listener] Successfully listening on channel '{_options.Value.NotificationChannel}'. Keeping connection alive...");
+
+            // Keep the connection open until cancellation is requested
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            Console.WriteLine("[Listener] Notification listener cancelled.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Listener Error] Unexpected error in notification listener: {ex.Message}");
+        }
+    }
+
+
+    private async Task ProcessNotifications(ChannelReader<Notification> reader, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await foreach (var notification in reader.ReadAllAsync(cancellationToken))
             {
                 try
                 {
-                    var message = JsonSerializer.Deserialize<Message>(args.Payload);
-                    if (message != null)
+                    Console.WriteLine($"[Processor] Processing incoming message: Id={notification.Message.Id}");
+                    var payload = new ReadOnlyMemory<byte>(notification.Message.Payload);
+                    var messageType = _protocol.ReadMessageType(payload); 
+                    var result = messageType switch
                     {
-                        writer.TryWrite(new Notification(message, args.Channel, args.PID));
-                    }
+                        MessageType.Ack => HandleAck(payload),
+                        MessageType.Group => HandleGroup(payload),
+                        MessageType.InvocationAll => HandleInvocationAll(payload),
+                        MessageType.InvocationGroup => HandleInvocationGroup(payload),
+                        MessageType.InvocationConnection => HandleInvocationConnection(payload),
+                        MessageType.InvocationUser => HandleInvocationUser(payload),
+                        _ => throw new ArgumentOutOfRangeException()
+                    };
+                    await result;
                 }
-                catch (JsonException ex)
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"[Listener Error] Failed to deserialize payload: {args.Payload}. Error: {ex.Message}");
+                    _logger.LogError(ex, "Error processing notification with Id={NotificationId}", notification.Message.Id);
+                    // Continue processing other notifications
                 }
             }
-        };
-
-        await conn.OpenAsync();
-        Console.WriteLine("[Listener] Connection opened. Sending LISTEN command...");
-
-        // Send the LISTEN command
-        await using (var cmd = new NpgsqlCommand($"LISTEN {_options.Value.NotificationChannel}", conn))
-        {
-            await cmd.ExecuteNonQueryAsync();
         }
-
-        Console.WriteLine($"[Listener] Successfully listening on channel '{_options.Value.NotificationChannel}'. Keeping connection alive...");
-
-        // Keep the connection open indefinitely to receive notifications
-        // In a real application, you'd manage this with a CancellationToken or similar.
-        await Task.Delay(Timeout.Infinite);
-    }
-
-
-    private async Task ProcessNotifications(ChannelReader<Notification> reader)
-    {
-        await foreach (var notification in reader.ReadAllAsync())
+        catch (OperationCanceledException)
         {
-            Console.WriteLine($"[Processor] Processing incoming message: Id={notification.Message.Id}");
-            var payload = new ReadOnlyMemory<byte>(notification.Message.Payload);
-            var messageType = _protocol.ReadMessageType(payload); 
-            var result = messageType switch
-            {
-                MessageType.Ack => HandleAck(payload),
-                MessageType.Group => HandleGroup(payload),
-                MessageType.InvocationAll => HandleInvocationAll(payload),
-                MessageType.InvocationGroup => HandleInvocationGroup(payload),
-                MessageType.InvocationConnection => HandleInvocationConnection(payload),
-                MessageType.InvocationUser => HandleInvocationUser(payload),
-                _ => throw new ArgumentOutOfRangeException()
-            };
-            await result;
-            // Here you would add your business logic to process the notification
-            // e.g., update a cache, send to another service, log, etc.
+            Console.WriteLine("[Processor] Notification processor cancelled.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error in notification processor");
         }
     }
     private async Task HandleInvocationUser(ReadOnlyMemory<byte> payload)
@@ -477,38 +556,37 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
     {
         public HashSet<string> Groups { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     }
-
-
-    // Example usage of SqlHubMessage.Serialize() with [MessagePackObject]:
-    // var message = new SqlHubMessage(MessageType.InvocationAll, "ChatMessage", new object[] { "Hello, World!" }, null, _protocol);
-    // var serializedData = message.Serialize();
-    // This serializedData can now be sent to PostgreSQL for distribution to other servers
-
-    // The Serialize() method now uses [MessagePackObject] attributes for automatic serialization:
-    // 1. MessageType, MethodName, Args, ExcludedConnectionIds, Target, and SerializedMessage are all serialized automatically
-    // 2. Uses MessagePackSerializer.Serialize() for clean, declarative serialization
-    // 3. Supports deserialization with MessagePackSerializer.Deserialize<SqlHubMessage>()
-    // 4. More maintainable than manual MessagePack writer approach
-
-
+    
     public record Message(int Id, byte[] Payload, DateTime InsertedOn);
     
     public record Notification(Message Message, string Channel, int PID);
     
     private async Task PublishAsync(MessageType type, byte[] payload)
     {
-        await EnsurePostgresInitializedAsync();
-        _logger.LogInformation("Published message of type {MessageType}", type);
+        try
+        {
+            // Only ensure initialization on first call, prevent recursion
+            if (!_isInitialized)
+            {
+                await EnsurePostgresInitializedAsync();
+            }
+            
+            _logger.LogInformation("Published message of type {MessageType}", type);
 
-        // Insert message into the database table, which will trigger the notification
-        await using var dataSource = NpgsqlDataSource.Create(_options.Value.ConnectionString);
-        var schema = _options.Value.SchemaName;
-        var tableName = $"{_options.Value.TableSlugGenerator(typeof(THub))}_Messages";
-        
-        var insertSql = $@"INSERT INTO ""{schema}"".""{tableName}"" (""Payload"") VALUES (@payload)";
-        
-        await using var cmd = dataSource.CreateCommand(insertSql);
-        cmd.Parameters.AddWithValue("@payload", payload);
-        await cmd.ExecuteNonQueryAsync();
+            // Use the shared data source for connection pooling
+            var schema = _options.Value.SchemaName;
+            var tableName = $"{_options.Value.TableSlugGenerator(typeof(THub))}_Messages";
+            
+            var insertSql = $@"INSERT INTO ""{schema}"".""{tableName}"" (""Payload"") VALUES (@payload)";
+            
+            await using var cmd = _dataSource.CreateCommand(insertSql);
+            cmd.Parameters.AddWithValue("@payload", payload);
+            await cmd.ExecuteNonQueryAsync(_cancellationTokenSource.Token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish message of type {MessageType}", type);
+            throw;
+        }
     }
 }
