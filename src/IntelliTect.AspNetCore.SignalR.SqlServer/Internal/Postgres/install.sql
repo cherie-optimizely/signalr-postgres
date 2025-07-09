@@ -7,7 +7,7 @@ CREATE SCHEMA IF NOT EXISTS "SignalR";
 -- Create tables
 CREATE TABLE IF NOT EXISTS "SignalR"."Messages" (
     "PayloadId" SERIAL PRIMARY KEY, -- Auto-incrementing integer for payload ID
-    "Payload" VARCHAR,
+    "Payload" BYTEA NOT NULL, -- Binary data for the payload
     "InsertedOn" TIMESTAMP NOT NULL DEFAULT NOW()
 );
 

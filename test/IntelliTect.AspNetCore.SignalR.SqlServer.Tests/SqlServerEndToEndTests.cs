@@ -9,10 +9,12 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
     public class SqlServerEndToEndTests
     {
         private const string databaseName = "SignalRUnitTestsDb";
-        private const string password = "yourStrong(!)Password";
+        private const string username = "postgres";
+
+        private const string password = "Pa55word";
         private const string connectionString = 
             // "Server=localhost,1433;Database=" + databaseName + ";User Id=sa;Password=" + password + ";TrustServerCertificate=true";
-            "Host=localhost:5432;Username=sa;Password=" + password + ";Database=" + databaseName + ";";
+            "Host=34.52.228.243:5432;Username=" + username + ";Password=" + password + ";Database=" + databaseName + ";";
 
         [Fact(Skip = "Not supported.")]
         public async Task CanSendAndReceivePayloads_WithServiceBroker()
