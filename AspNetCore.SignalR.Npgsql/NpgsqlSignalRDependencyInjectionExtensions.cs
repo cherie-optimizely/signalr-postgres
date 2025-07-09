@@ -52,5 +52,5 @@ public class NpgsqlOption
     /// By default, uses the Hub's unqualified type name.
     /// </summary>
     public Func<Type, string> TableSlugGenerator { get; set; } = type => type.Name;
-    public string NotificationChannel { get; set; } = "SignalRNotificationChannel";
+    public string NotificationChannel { get; set; } = "signalr_notification_channel";
 }

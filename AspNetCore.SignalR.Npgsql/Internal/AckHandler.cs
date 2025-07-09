@@ -12,7 +12,7 @@ internal class AckHandler : IDisposable
 
         public AckHandler()
         {
-            // _timer = NonCapturingTimer.Create(state => ((AckHandler)state!).CheckAcks(), state: this, dueTime: _ackInterval, period: _ackInterval);
+            _timer = NonCapturingTimer.Create(state => ((AckHandler)state!).CheckAcks(), state: this, dueTime: _ackInterval, period: _ackInterval);
         }
 
         public Task CreateAck(int id)

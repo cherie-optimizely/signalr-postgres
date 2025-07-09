@@ -29,6 +29,19 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore.SignalR.Npgsql",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore.SignalR.Npgsql.Tests", "AspNetCore.SignalR.Npgsql.Tests\AspNetCore.SignalR.Npgsql.Tests.csproj", "{2C853D62-1396-4329-BABB-AE270F0150EA}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{05F3437D-4BDE-4E13-9888-DA23E61569C6}"
+	ProjectSection(SolutionItems) = preProject
+		examples\README.md = examples\README.md
+		examples\PROJECT-SUMMARY.md = examples\PROJECT-SUMMARY.md
+		examples\docker-compose.yml = examples\docker-compose.yml
+		examples\start-multiple-servers.ps1 = examples\start-multiple-servers.ps1
+		examples\start-multiple-servers.sh = examples\start-multiple-servers.sh
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatClient", "examples\ChatClient\ChatClient.csproj", "{EDA385EF-583C-4ABB-988F-9FD369AE1AF4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatServer", "examples\ChatServer\ChatServer.csproj", "{49F68369-5621-487F-9C12-9DCF447A100E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +72,14 @@ Global
 		{2C853D62-1396-4329-BABB-AE270F0150EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2C853D62-1396-4329-BABB-AE270F0150EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2C853D62-1396-4329-BABB-AE270F0150EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EDA385EF-583C-4ABB-988F-9FD369AE1AF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDA385EF-583C-4ABB-988F-9FD369AE1AF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDA385EF-583C-4ABB-988F-9FD369AE1AF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDA385EF-583C-4ABB-988F-9FD369AE1AF4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{49F68369-5621-487F-9C12-9DCF447A100E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49F68369-5621-487F-9C12-9DCF447A100E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49F68369-5621-487F-9C12-9DCF447A100E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49F68369-5621-487F-9C12-9DCF447A100E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -70,6 +91,8 @@ Global
 		{888FC3BC-2589-4A5F-8235-5737053065A6} = {62241700-24B6-4D13-A183-2502D628ED43}
 		{C1C28F48-3853-4DE1-8322-FAAC7003967C} = {21874FF3-BE97-4F3B-AD63-EC347FF757FF}
 		{2C853D62-1396-4329-BABB-AE270F0150EA} = {21874FF3-BE97-4F3B-AD63-EC347FF757FF}
+		{EDA385EF-583C-4ABB-988F-9FD369AE1AF4} = {05F3437D-4BDE-4E13-9888-DA23E61569C6}
+		{49F68369-5621-487F-9C12-9DCF447A100E} = {05F3437D-4BDE-4E13-9888-DA23E61569C6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {41DEFC27-E139-4A35-989F-DA872E4B9F0A}
