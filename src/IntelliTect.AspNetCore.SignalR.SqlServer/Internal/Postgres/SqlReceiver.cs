@@ -74,11 +74,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
 
             if (_cts.IsCancellationRequested) return;
 
-            if (_options.Mode.HasFlag(SqlServerMessageMode.ServiceBroker))// && StartSqlDependencyListener())
-            {
-                throw new NotImplementedException("Service Broker mode is not yet implemented for Postgres.");
-            }
-            else if (_options.Mode.HasFlag(SqlServerMessageMode.Polling))
+            if (_options.Mode.HasFlag(SqlServerMessageMode.Polling))
             {
                 await PollingLoop(_cts.Token);
             }
@@ -163,12 +159,11 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         {
             try
         {
-                var dataSourceBuilder = new NpgsqlDataSourceBuilder(_options.ConnectionString);
-                var dataSource = dataSourceBuilder.Build();
+                var connection = new NpgsqlConnection(_options.ConnectionString);
 
-                var connection = await dataSource.OpenConnectionAsync();
+                await connection.OpenAsync();
 
-                await using (var command = new NpgsqlCommand("SELECT max(\"PayloadId\") FROM \"SignalR\".\"Messages\";", connection))
+                await using (var command = new NpgsqlCommand("SELECT COALESCE(MAX(\"PayloadId\"), 0) FROM \"SignalR\".\"Messages\";", connection))
                 {
                     var id = await command.ExecuteScalarAsync();
                     if (id is null) throw new Exception($"Unable to retrieve the starting payload ID for table \"Messages\"");
@@ -191,13 +186,11 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         {
             var recordCount = 0;
 
-            var dataSourceBuilder = new NpgsqlDataSourceBuilder(_options.ConnectionString);
-            var dataSource = dataSourceBuilder.Build();
-
-            var connection = await dataSource.OpenConnectionAsync();
+            var connection = new NpgsqlConnection(_options.ConnectionString);
+            await connection.OpenAsync();
 
 
-            await using var command = dataSource.CreateCommand("SELECT \"PayloadId\", \"Payload\", \"InsertedOn\" FROM \"SignalR\".\"Messages\" WHERE \"PayloadId\" > (@p);");
+            await using var command = new NpgsqlCommand("SELECT \"PayloadId\", \"Payload\", \"InsertedOn\" FROM \"SignalR\".\"Messages\" WHERE \"PayloadId\" > (@p);", connection);
             command.Parameters.AddWithValue("p", _lastPayloadId ?? 0);
             await using var reader = await command.ExecuteReaderAsync();
 

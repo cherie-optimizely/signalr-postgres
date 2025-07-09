@@ -19,13 +19,12 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
             }
 
             await options.InstallLock.WaitAsync();
-            logger.LogInformation("{HubName}: Start installing SignalR SQL objects", tracePrefix);
+            logger.LogInformation("{HubName}: Start installing SignalR SQL postgres objects", tracePrefix);
             try
             {
-                var dataSourceBuilder = new NpgsqlDataSourceBuilder(options.ConnectionString);
-                var dataSource = dataSourceBuilder.Build();
+                var connection = new NpgsqlConnection(options.ConnectionString);
 
-                var connection = await dataSource.OpenConnectionAsync();
+                await connection.OpenAsync();
 
                 if (options.AutoInstallSchema)
                 {
@@ -38,7 +37,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
                         await command.ExecuteNonQueryAsync();
                     }
 
-                    logger.LogInformation("{HubName}: SignalR SQL objects installed", messagesTableNamePrefix);
+                    logger.LogInformation("{HubName}: SignalR SQL objects postgres installed", messagesTableNamePrefix);
                 }
             }
             catch (Exception ex)
