@@ -1,0 +1,1 @@
+SELECT COALESCE(MAX("PayloadId"), 0) FROM "SignalR"."Messages";

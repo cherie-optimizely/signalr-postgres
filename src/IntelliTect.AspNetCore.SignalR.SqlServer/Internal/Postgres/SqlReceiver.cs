@@ -159,10 +159,11 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         {
             try
             {
+                var script = GetType().Assembly.StringResource("latestId.sql");
                 await using var connection = new NpgsqlConnection(_options.ConnectionString);
                 await connection.OpenAsync();
 
-                await using (var command = new NpgsqlCommand("SELECT COALESCE(MAX(\"PayloadId\"), 0) FROM \"SignalR\".\"Messages\";", connection))
+                await using (var command = new NpgsqlCommand(script, connection))
                 {
                     var id = await command.ExecuteScalarAsync();
                     if (id is null) throw new Exception($"Unable to retrieve the starting payload ID for table \"Messages\"");
@@ -185,10 +186,11 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         {
             var recordCount = 0;
 
-            await using var connection = new NpgsqlConnection(_options.ConnectionString);
-await connection.OpenAsync();
+            var script = GetType().Assembly.StringResource("read.sql");
 
-            await using var command = new NpgsqlCommand("SELECT \"PayloadId\", \"Payload\", \"InsertedOn\" FROM \"SignalR\".\"Messages\" WHERE \"PayloadId\" > (@p);", connection);
+            await using var connection = new NpgsqlConnection(_options.ConnectionString);
+            await connection.OpenAsync();
+            await using var command = new NpgsqlCommand(script, connection);
             command.Parameters.AddWithValue("p", _lastPayloadId ?? 0);
             await using var reader = await command.ExecuteReaderAsync();
 
@@ -229,63 +231,6 @@ await connection.OpenAsync();
 
             await _onReceived!.Invoke(id, payload ?? Array.Empty<byte>());
         }
-
-        /// <summary>
-        /// Attempt to start SQL Dependency listening for notification-based polling,
-        /// returning a boolean indicating success. If false, SQL notifications cannot be used.
-        /// </summary>
-        /// <returns></returns>
-        // private bool StartSqlDependencyListener()
-        // {
-        //     if (_notificationsDisabled)
-        //     {
-        //         return false;
-        //     }
-
-        //     _logger.LogTrace("{HubStream}: Starting SQL notification listener", _tracePrefix);
-        //     try
-        //     {
-        //         if (SqlDependency.Start(_options.ConnectionString))
-        //         {
-        //             _logger.LogTrace("{HubStream}: SQL notification listener started", _tracePrefix);
-        //         }
-        //         else
-        //         {
-        //             _logger.LogTrace("{HubStream}: SQL notification listener was already running", _tracePrefix);
-        //         }
-        //         return true;
-        //     }
-        //     catch (InvalidOperationException)
-        //     {
-        //         _logger.LogWarning("{HubStream}: SQL Service Broker is disabled on the target database.", _tracePrefix);
-        //         _notificationsDisabled = true;
-        //         return false;
-        //     }
-        //     catch (NullReferenceException)
-        //     {
-        //         // Workaround for https://github.com/dotnet/SqlClient/issues/1264
-
-        //         _logger.LogWarning("{HubStream}: SQL Service Broker is disabled or unsupported by the target database.", _tracePrefix);
-        //         _notificationsDisabled = true;
-        //         return false;
-        //     }
-        //     catch (SqlException ex) when (ex.Number == 40510 || ex.Message.Contains("not supported"))
-        //     {
-        //         // Workaround for https://github.com/dotnet/SqlClient/issues/1264.
-        //         // Specifically that Azure SQL Database reports that service broker is enabled,
-        //         // even though it is entirely unsupported.
-
-        //         _logger.LogWarning("{HubStream}: SQL Service Broker is unsupported by the target database.", _tracePrefix);
-        //         _notificationsDisabled = true;
-        //         return false;
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         _logger.LogError(ex, "{HubStream}: Error starting SQL notification listener", _tracePrefix);
-
-        //         return false;
-        //     }
-        // }
 
         public void Dispose()
         {
