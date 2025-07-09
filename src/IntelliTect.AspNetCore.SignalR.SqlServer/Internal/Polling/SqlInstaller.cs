@@ -4,7 +4,7 @@
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
+namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Polling
 {
     internal class SqlInstaller(PostgresOptions options, ILogger logger, string messagesTableNamePrefix, string tracePrefix)
     {

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualBasic;
 using Npgsql;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
+namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Polling
 {
     internal class SqlReceiver : IDisposable
     {
