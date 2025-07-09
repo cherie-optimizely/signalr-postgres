@@ -12,7 +12,7 @@ public static class NpgsqlSignalRDependencyInjectionExtensions
     private static ISignalRServerBuilder AddNpgsql(ISignalRServerBuilder signalrBuilder, Action<NpgsqlOption> configure)
     {
         signalrBuilder.Services.Configure(configure);
-        signalrBuilder.Services.AddSingleton(typeof(HubLifetimeManager<>), typeof(PostgresHubLifetimeManager<>));
+        signalrBuilder.Services.AddSingleton(typeof(HubLifetimeManager<>), typeof(NpgsqlHubLifetimeManager<>));
         return signalrBuilder;
     }
     
@@ -41,6 +41,7 @@ public class NpgsqlOption
     /// </summary>
     [Required]
     public string ConnectionString { get; set; } = "";
+    
     /// <summary>
     /// The name of the database schema to use for the underlying PostgresSQL Tables.
     /// </summary>
@@ -52,5 +53,26 @@ public class NpgsqlOption
     /// By default, uses the Hub's unqualified type name.
     /// </summary>
     public Func<Type, string> TableSlugGenerator { get; set; } = type => type.Name;
+    
+    /// <summary>
+    /// The PostgreSQL notification channel name to use for message distribution.
+    /// </summary>
     public string NotificationChannel { get; set; } = "signalr_notification_channel";
+    
+    /// <summary>
+    /// Maximum number of retry attempts for the notification listener before giving up.
+    /// Default is 10.
+    /// </summary>
+    public int MaxRetryAttempts { get; set; } = 10;
+    
+    /// <summary>
+    /// Base delay for exponential backoff when retrying failed connections.
+    /// Default is 1 second.
+    /// </summary>
+    public TimeSpan BaseRetryDelay { get; set; } = TimeSpan.FromSeconds(1);
+    
+    /// <summary>
+    /// Timeout for PostgreSQL operations. If not set, uses the connection string timeout.
+    /// </summary>
+    public TimeSpan? CommandTimeout { get; set; }
 }

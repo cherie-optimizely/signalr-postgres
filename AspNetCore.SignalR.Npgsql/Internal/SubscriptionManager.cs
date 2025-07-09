@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
-namespace AspNetCore.SignalR.Npgsql;
+namespace AspNetCore.SignalR.Npgsql.Internal;
 
 internal class SubscriptionManager
 {

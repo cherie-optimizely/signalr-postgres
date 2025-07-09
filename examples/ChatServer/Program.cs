@@ -24,6 +24,10 @@ builder.Services.AddSignalR()
     {
         options.SchemaName = "signalr";
         options.TableSlugGenerator = hubType => hubType.Name.ToLowerInvariant();
+        options.NotificationChannel = "chat_notifications";
+        options.MaxRetryAttempts = 5;
+        options.BaseRetryDelay = TimeSpan.FromSeconds(2);
+        options.CommandTimeout = TimeSpan.FromSeconds(30);
     });
 
 // Configure logging

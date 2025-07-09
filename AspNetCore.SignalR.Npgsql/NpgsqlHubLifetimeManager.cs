@@ -11,13 +11,19 @@ using System.Threading.Channels;
 
 namespace AspNetCore.SignalR.Npgsql;
 
-public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposable
+/// <summary>
+/// A PostgreSQL-based implementation of <see cref="HubLifetimeManager{THub}"/> that manages SignalR hub connections
+/// and enables communication between multiple server instances using PostgreSQL as a backplane.
+/// This implementation uses PostgreSQL's LISTEN/NOTIFY mechanism for real-time message distribution.
+/// </summary>
+/// <typeparam name="THub">The type of hub being managed.</typeparam>
+public class NpgsqlHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposable
     where THub : Hub
 {
-    private readonly ILogger<PostgresHubLifetimeManager<THub>> _logger;
+    private readonly ILogger<NpgsqlHubLifetimeManager<THub>> _logger;
     private readonly IOptions<NpgsqlOption> _options;
     private readonly PostgresProtocol _protocol;
-    
+
     private readonly string _serverName = GenerateServerName();
 
 
@@ -26,18 +32,28 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
     private readonly HubConnectionStore _connections = new();
     private readonly SubscriptionManager _groups = new SubscriptionManager();
     private readonly SubscriptionManager _users = new SubscriptionManager();
-    
+
     private readonly AckHandler _ackHandler;
     private int _internalId;
-    
-    private volatile bool _isInitialized = false;
+
+    private volatile bool _isInitialized;
     private readonly SemaphoreSlim _initSemaphore = new(1, 1);
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly NpgsqlDataSource _dataSource;
 
-    public PostgresHubLifetimeManager(
-        ILogger<PostgresHubLifetimeManager<THub>> logger, 
-        IOptions<NpgsqlOption> options, 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NpgsqlHubLifetimeManager{THub}"/> class.
+    /// </summary>
+    /// <param name="logger">The logger for the hub lifetime manager.</param>
+    /// <param name="options">Configuration options for the PostgreSQL backplane.</param>
+    /// <param name="lifetime">The application lifetime to register startup tasks.</param>
+    /// <param name="hubProtocolResolver">Resolver for hub protocols.</param>
+    /// <param name="globalHubOptions">Global hub options configuration.</param>
+    /// <param name="hubOptions">Hub-specific options configuration.</param>
+    /// <exception cref="InvalidOperationException">Thrown when ConnectionString is not provided in options.</exception>
+    public NpgsqlHubLifetimeManager(
+        ILogger<NpgsqlHubLifetimeManager<THub>> logger,
+        IOptions<NpgsqlOption> options,
         IHostApplicationLifetime lifetime,
         IHubProtocolResolver hubProtocolResolver,
         IOptions<HubOptions>? globalHubOptions,
@@ -46,13 +62,13 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         _logger = logger;
         _options = options;
         _ackHandler = new AckHandler();
-        
+
         // Validate required options
         if (string.IsNullOrEmpty(_options.Value.ConnectionString))
             throw new InvalidOperationException("ConnectionString is required");
-            
+
         _dataSource = NpgsqlDataSource.Create(_options.Value.ConnectionString);
-        
+
         if (globalHubOptions != null && hubOptions != null)
         {
             _protocol = new PostgresProtocol(new DefaultHubMessageSerializer(hubProtocolResolver, globalHubOptions.Value.SupportedProtocols, hubOptions.Value.SupportedProtocols));
@@ -92,7 +108,7 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
             throw;
         }
     }
-    
+
     /// <inheritdoc />
     public override Task OnDisconnectedAsync(HubConnectionContext connection)
     {
@@ -121,30 +137,24 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         return Task.WhenAll(tasks);
     }
 
-    
-    
-
     /// <inheritdoc />
     public override Task SendAllAsync(string methodName, object?[] args, CancellationToken cancellationToken = new CancellationToken())
     {
         var message = _protocol.WriteInvocationAll(methodName, args, null);
         return PublishAsync(MessageType.InvocationAll, message);
     }
-    
+
     /// <inheritdoc />
     public override Task SendAllExceptAsync(string methodName, object?[] args, IReadOnlyList<string> excludedConnectionIds, CancellationToken cancellationToken = new CancellationToken())
     {
         var message = _protocol.WriteInvocationAll(methodName, args, excludedConnectionIds);
         return PublishAsync(MessageType.InvocationAll, message);
     }
-    
+
     /// <inheritdoc />
     public override Task SendConnectionAsync(string connectionId, string methodName, object?[] args, CancellationToken cancellationToken = new CancellationToken())
     {
-        if (connectionId == null)
-        {
-            throw new ArgumentNullException(nameof(connectionId));
-        }
+        ArgumentNullException.ThrowIfNull(connectionId);
 
         // If the connection is local we can skip sending the message through the bus since we require sticky connections.
         // This also saves serializing and deserializing the message!
@@ -157,6 +167,8 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         var message = _protocol.WriteTargetedInvocation(MessageType.InvocationConnection, connectionId, methodName, args, null);
         return PublishAsync(MessageType.InvocationConnection, message);
     }
+
+    /// <inheritdoc />
     public override Task SendConnectionsAsync(IReadOnlyList<string> connectionIds, string methodName, object?[] args, CancellationToken cancellationToken = new CancellationToken())
     {
         ArgumentNullException.ThrowIfNull(connectionIds);
@@ -169,6 +181,8 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
 
         return Task.WhenAll(publishTasks);
     }
+
+    /// <inheritdoc />
     public override Task SendGroupAsync(string groupName, string methodName, object?[] args, CancellationToken cancellationToken = new CancellationToken())
     {
         if (groupName == null)
@@ -179,6 +193,8 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         var message = _protocol.WriteTargetedInvocation(MessageType.InvocationGroup, groupName, methodName, args, null);
         return PublishAsync(MessageType.InvocationGroup, message);
     }
+
+    /// <inheritdoc />
     public override Task SendGroupsAsync(IReadOnlyList<string> groupNames, string methodName, object?[] args, CancellationToken cancellationToken = new CancellationToken())
     {
         ArgumentNullException.ThrowIfNull(groupNames);
@@ -194,6 +210,8 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
 
         return Task.WhenAll(publishTasks);
     }
+
+    /// <inheritdoc />
     public override Task SendGroupExceptAsync(string groupName, string methodName, object?[] args, IReadOnlyList<string> excludedConnectionIds, CancellationToken cancellationToken = new CancellationToken())
     {
         ArgumentNullException.ThrowIfNull(groupName);
@@ -201,11 +219,15 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         var message = _protocol.WriteTargetedInvocation(MessageType.InvocationGroup, groupName, methodName, args, excludedConnectionIds);
         return PublishAsync(MessageType.InvocationGroup, message);
     }
+
+    /// <inheritdoc />
     public override Task SendUserAsync(string userId, string methodName, object?[] args, CancellationToken cancellationToken = new CancellationToken())
     {
         var message = _protocol.WriteTargetedInvocation(MessageType.InvocationUser, userId, methodName, args, null);
         return PublishAsync(MessageType.InvocationUser, message);
     }
+
+    /// <inheritdoc />
     public override Task SendUsersAsync(IReadOnlyList<string> userIds, string methodName, object?[] args, CancellationToken cancellationToken = new CancellationToken())
     {
         if (userIds.Count == 0)
@@ -224,6 +246,8 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
 
         return Task.WhenAll(publishTasks);
     }
+
+    /// <inheritdoc />
     public override Task AddToGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = new CancellationToken())
     {
         ArgumentNullException.ThrowIfNull(connectionId);
@@ -238,6 +262,8 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
 
         return SendGroupActionAndWaitForAck(connectionId, groupName, GroupAction.Add);
     }
+
+    /// <inheritdoc />
     public override Task RemoveFromGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = new CancellationToken())
     {
         ArgumentNullException.ThrowIfNull(connectionId);
@@ -252,19 +278,30 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
 
         return SendGroupActionAndWaitForAck(connectionId, groupName, GroupAction.Remove);
     }
-    
+
+    /// <summary>
+    /// Releases all resources used by the <see cref="NpgsqlHubLifetimeManager{THub}"/>.
+    /// This includes cancelling background tasks and disposing the data source.
+    /// </summary>
     public void Dispose()
     {
         if (!_cancellationTokenSource.IsCancellationRequested)
         {
             _cancellationTokenSource.Cancel();
         }
-        
+
         _cancellationTokenSource.Dispose();
         _initSemaphore.Dispose();
         _dataSource.Dispose();
     }
-    
+
+    /// <summary>
+    /// Sends a group action (add/remove) to other servers and waits for acknowledgment.
+    /// </summary>
+    /// <param name="connectionId">The ID of the connection to add/remove from the group.</param>
+    /// <param name="groupName">The name of the group.</param>
+    /// <param name="action">The action to perform (Add or Remove).</param>
+    /// <returns>A task that completes when the acknowledgment is received or times out.</returns>
     private async Task SendGroupActionAndWaitForAck(string connectionId, string groupName, GroupAction action)
     {
         var id = Interlocked.Increment(ref _internalId);
@@ -275,7 +312,13 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
 
         await ack;
     }
-    
+
+    /// <summary>
+    /// Adds a connection to a group locally on this server instance.
+    /// </summary>
+    /// <param name="connection">The connection to add to the group.</param>
+    /// <param name="groupName">The name of the group to add the connection to.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     private Task AddGroupAsyncCore(HubConnectionContext connection, string groupName)
     {
         var feature = connection.Features.Get<ISqlFeature>()!;
@@ -292,7 +335,13 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
 
         return _groups.AddSubscriptionAsync(groupName, connection);
     }
-    
+
+    /// <summary>
+    /// Removes a connection from a group locally on this server instance.
+    /// </summary>
+    /// <param name="connection">The connection to remove from the group.</param>
+    /// <param name="groupName">The name of the group to remove the connection from.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     private async Task RemoveGroupAsyncCore(HubConnectionContext connection, string groupName)
     {
         await _groups.RemoveSubscriptionAsync(groupName, connection);
@@ -304,25 +353,33 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
             groupNames.Remove(groupName);
         }
     }
-    
-    
+
+
+    /// <summary>
+    /// Ensures that the PostgreSQL database is initialized, including creating the necessary schema and tables.
+    /// The following operations are performed:
+    /// - Creates the specified schema if it does not exist.
+    /// - Creates a table for storing messages if it does not exist.
+    /// - Sets up a trigger and function to notify on new message inserts.
+    /// - Starts background tasks to listen for notifications and process them.
+    /// </summary>
     private async Task EnsurePostgresInitializedAsync()
     {
         if (_isInitialized) return;
-        
+
         await _initSemaphore.WaitAsync(_cancellationTokenSource.Token);
         try
         {
             if (_isInitialized) return;
 
             var notificationChannel = _options.Value.NotificationChannel;
-            Console.WriteLine($"[Init] Initializing PostgreSQL backplane with notification channel: {notificationChannel}");
-            
+            _logger.LogInformation("Initializing PostgreSQL backplane with notification channel: {NotificationChannel}", notificationChannel);
+
             // Ensure schema exists and create message table in a single command
             var schema = _options.Value.SchemaName;
             var tableName = $"{_options.Value.TableSlugGenerator(typeof(THub))}_Messages";
-            Console.WriteLine($"[Init] Creating schema '{schema}' and table '{tableName}'");
-            
+            _logger.LogDebug("Creating schema '{Schema}' and table '{TableName}'", schema, tableName);
+
             var createSchemaAndTableSql = $@"
                 CREATE SCHEMA IF NOT EXISTS ""{schema}"";
                 CREATE TABLE IF NOT EXISTS ""{schema}"".""{tableName}"" (
@@ -354,19 +411,19 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
                 FOR EACH ROW
                 EXECUTE FUNCTION notify_{tableName}_change();
                 ";
-            
+
             await using var cmd = _dataSource.CreateCommand(createSchemaAndTableSql);
             await cmd.ExecuteNonQueryAsync(_cancellationTokenSource.Token);
 
-            Console.WriteLine("[Init] Database schema and triggers created successfully");
+            _logger.LogInformation("Database schema and triggers created successfully");
 
             // Start background tasks
-            Console.WriteLine("[Init] Starting background notification listener and processor tasks");
+            _logger.LogDebug("Starting background notification listener and processor tasks");
             _ = Task.Run(() => ListenForNotifications(_notificationChannel.Writer, _cancellationTokenSource.Token), _cancellationTokenSource.Token);
             _ = Task.Run(() => ProcessNotifications(_notificationChannel.Reader, _cancellationTokenSource.Token), _cancellationTokenSource.Token);
 
             _isInitialized = true;
-            Console.WriteLine("[Init] PostgreSQL backplane initialization completed");
+            _logger.LogInformation("PostgreSQL backplane initialization completed");
         }
         finally
         {
@@ -374,93 +431,172 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         }
     }
 
+    /// <summary>
+    /// Listens for PostgreSQL notifications and forwards them to the notification channel.
+    /// Implements retry logic with exponential backoff in case of connection failures.
+    /// </summary>
+    /// <param name="writer">The channel writer to send notifications to.</param>
+    /// <param name="cancellationToken">Token to cancel the listening operation.</param>
+    /// <returns>A task that represents the listening operation.</returns>
     private async Task ListenForNotifications(ChannelWriter<Notification> writer, CancellationToken cancellationToken)
     {
+        var retryCount = 0;
+        var maxRetryCount = _options.Value.MaxRetryAttempts;
+        var baseDelay = _options.Value.BaseRetryDelay;
+
         while (!cancellationToken.IsCancellationRequested)
         {
+            NpgsqlConnection? conn = null;
             try
             {
-                var conn = new NpgsqlConnection(_options.Value.ConnectionString);
-                conn.StateChange += (_, args) =>
-                {
-                    Console.WriteLine("[Listener] Connection state changed: " + args.CurrentState);
-                };
-                await conn.OpenAsync(cancellationToken);
+                // Use the data source for connection pooling and better resource management
+                conn = await _dataSource.OpenConnectionAsync(cancellationToken);
+
+                _logger.LogDebug("PostgreSQL notification listener connection opened. State: {ConnectionState}", conn.State);
 
                 // Set up the notification handler
                 conn.Notification += (_, args) =>
                 {
-                    Console.WriteLine($"[Listener] Received notification on channel '{args.Channel}' from PID {args.PID}. Payload: {args.Payload}");
-                    if (args.Channel == _options.Value.NotificationChannel)
+                    try
                     {
-                        try
+                        _logger.LogTrace("Received notification on channel '{Channel}' from PID {PID}", args.Channel, args.PID);
+
+                        if (args.Channel == _options.Value.NotificationChannel)
                         {
-                            // Parse the JSON payload that contains base64 encoded binary data
-                            using var doc = JsonDocument.Parse(args.Payload);
-                            var root = doc.RootElement;
-                            
-                            var id = root.GetProperty("Id").GetInt32();
-                            var payloadBase64 = root.GetProperty("Payload").GetString();
-                            var insertedOn = root.GetProperty("InsertedOn").GetDateTime();
-                            
-                            if (payloadBase64 != null)
-                            {
-                                var payloadBytes = Convert.FromBase64String(payloadBase64);
-                                var message = new Message(id, payloadBytes, insertedOn);
-                                writer.TryWrite(new Notification(message, args.Channel, args.PID));
-                            }
+                            ProcessNotificationPayload(args.Payload, writer, args.Channel, args.PID);
                         }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"[Listener Error] Failed to deserialize payload: {args.Payload}. Error: {ex.Message}");
-                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing PostgreSQL notification payload: {Payload}", args.Payload);
                     }
                 };
 
-                Console.WriteLine("[Listener] Connection opened. Sending LISTEN command...");
-
                 // Send the LISTEN command
-                var cmd = new NpgsqlCommand($"LISTEN {_options.Value.NotificationChannel};", conn);
+                await using var cmd = new NpgsqlCommand($"LISTEN {_options.Value.NotificationChannel};", conn);
+
+                // Apply command timeout if configured
+                if (_options.Value.CommandTimeout.HasValue)
+                {
+                    cmd.CommandTimeout = (int)_options.Value.CommandTimeout.Value.TotalSeconds;
+                }
+
                 await cmd.ExecuteNonQueryAsync(cancellationToken);
 
-                Console.WriteLine($"[Listener] Successfully listening on channel '{_options.Value.NotificationChannel}'. Waiting for notifications...");
+                _logger.LogInformation("Successfully listening on PostgreSQL notification channel '{Channel}'", _options.Value.NotificationChannel);
+
+                // Reset retry count on successful connection
+                retryCount = 0;
 
                 // Keep the connection alive and wait for notifications
-                // Use a loop with periodic waits to process notifications
-                while (true)
+                while (!cancellationToken.IsCancellationRequested)
                 {
                     await conn.WaitAsync(cancellationToken);
                 }
-
             }
             catch (OperationCanceledException)
             {
-                Console.WriteLine("[Listener] Notification listener cancelled.");
+                _logger.LogDebug("PostgreSQL notification listener cancelled");
                 break;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Listener Error] Unexpected error in notification listener: {ex.Message}");
-                Console.WriteLine($"[Listener Error] Stack trace: {ex.StackTrace}");
-                
-                // If we get an error, wait a bit before retrying to avoid rapid retries
-                if (!cancellationToken.IsCancellationRequested)
+                _logger.LogError(ex, "Error in PostgreSQL notification listener (attempt {RetryCount}/{MaxRetryCount})", retryCount + 1, maxRetryCount);
+
+                // Implement exponential backoff with jitter
+                if (!cancellationToken.IsCancellationRequested && retryCount < maxRetryCount)
                 {
-                    Console.WriteLine("[Listener] Waiting 5 seconds before retrying connection...");
+                    retryCount++;
+                    var delay = TimeSpan.FromMilliseconds(
+                        baseDelay.TotalMilliseconds * Math.Pow(2, retryCount - 1) +
+                        Random.Shared.Next(0, 1000));
+
+                    _logger.LogWarning("Retrying PostgreSQL notification listener in {Delay}ms", delay.TotalMilliseconds);
+
                     try
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                        await Task.Delay(delay, cancellationToken);
                     }
                     catch (OperationCanceledException)
                     {
                         break;
                     }
                 }
+                else if (retryCount >= maxRetryCount)
+                {
+                    _logger.LogCritical("Maximum retry attempts ({MaxRetryCount}) reached for PostgreSQL notification listener. Stopping listener.", maxRetryCount);
+                    break;
+                }
             }
+            finally
+            {
+                // Ensure connection is properly disposed
+                conn?.Dispose();
+            }
+        }
+
+        _logger.LogInformation("PostgreSQL notification listener stopped");
+    }
+
+    /// <summary>
+    /// Processes a notification payload received from PostgreSQL and converts it to a structured notification.
+    /// </summary>
+    /// <param name="payload">The JSON payload containing the message data.</param>
+    /// <param name="writer">The channel writer to send the parsed notification to.</param>
+    /// <param name="channel">The notification channel name.</param>
+    /// <param name="pid">The PostgreSQL process ID that sent the notification.</param>
+    private void ProcessNotificationPayload(string payload, ChannelWriter<Notification> writer, string channel, int pid)
+    {
+        try
+        {
+            // Parse the JSON payload that contains base64 encoded binary data
+            using var doc = JsonDocument.Parse(payload);
+            var root = doc.RootElement;
+
+            var id = root.GetProperty("Id").GetInt32();
+            var payloadBase64 = root.GetProperty("Payload").GetString();
+            var insertedOn = root.GetProperty("InsertedOn").GetDateTime();
+
+            if (payloadBase64 != null)
+            {
+                var payloadBytes = Convert.FromBase64String(payloadBase64);
+                var message = new Message(id, payloadBytes, insertedOn);
+                var notification = new Notification(message, channel, pid);
+
+                if (!writer.TryWrite(notification))
+                {
+                    _logger.LogWarning("Failed to write notification to channel, channel may be full or closed");
+                }
+                else
+                {
+                    _logger.LogTrace("Successfully processed notification with ID {MessageId}", id);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Notification payload missing or null: {Payload}", payload);
+            }
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse JSON payload: {Payload}", payload);
+        }
+        catch (FormatException ex)
+        {
+            _logger.LogError(ex, "Failed to decode base64 payload: {Payload}", payload);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error processing notification payload: {Payload}", payload);
         }
     }
 
-
+    /// <summary>
+    /// Processes incoming notifications from the notification channel and dispatches them to the appropriate handlers.
+    /// </summary>
+    /// <param name="reader">The channel reader to receive notifications from.</param>
+    /// <param name="cancellationToken">Token to cancel the processing operation.</param>
+    /// <returns>A task that represents the processing operation.</returns>
     private async Task ProcessNotifications(ChannelReader<Notification> reader, CancellationToken cancellationToken)
     {
         try
@@ -469,9 +605,9 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
             {
                 try
                 {
-                    Console.WriteLine($"[Processor] Processing incoming message: Id={notification.Message.Id}");
+                    _logger.LogTrace("Processing incoming message: Id={MessageId}", notification.Message.Id);
                     var payload = new ReadOnlyMemory<byte>(notification.Message.Payload);
-                    var messageType = _protocol.ReadMessageType(payload); 
+                    var messageType = _protocol.ReadMessageType(payload);
                     var result = messageType switch
                     {
                         MessageType.Ack => HandleAck(payload),
@@ -493,13 +629,19 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         }
         catch (OperationCanceledException)
         {
-            Console.WriteLine("[Processor] Notification processor cancelled.");
+            _logger.LogDebug("Notification processor cancelled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error in notification processor");
         }
     }
+
+    /// <summary>
+    /// Handles invocation messages targeted at specific users.
+    /// </summary>
+    /// <param name="payload">The message payload containing the user invocation data.</param>
+    /// <returns>A task that represents the handling operation.</returns>
     private async Task HandleInvocationUser(ReadOnlyMemory<byte> payload)
     {
         var multiInvocation = _protocol.ReadTargetedInvocation(payload);
@@ -507,13 +649,25 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         var invocation = multiInvocation.Invocation;
         await ExecuteInvocation(invocation, connections);
     }
+
+    /// <summary>
+    /// Handles invocation messages targeted at specific connections.
+    /// </summary>
+    /// <param name="payload">The message payload containing the connection invocation data.</param>
+    /// <returns>A task that represents the handling operation.</returns>
     private async Task HandleInvocationConnection(ReadOnlyMemory<byte> payload)
     {
         var connectionInvocation = _protocol.ReadTargetedInvocation(payload);
         var userConnection = _connections[connectionInvocation.Target];
-        if (userConnection == null) return; 
+        if (userConnection == null) return;
         await userConnection.WriteAsync(connectionInvocation.Invocation.Message);
     }
+
+    /// <summary>
+    /// Handles invocation messages targeted at specific groups.
+    /// </summary>
+    /// <param name="payload">The message payload containing the group invocation data.</param>
+    /// <returns>A task that represents the handling operation.</returns>
     private async Task HandleInvocationGroup(ReadOnlyMemory<byte> payload)
     {
         var multiInvocation = _protocol.ReadTargetedInvocation(payload);
@@ -521,13 +675,23 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         var invocation = multiInvocation.Invocation;
         await ExecuteInvocation(invocation, connections);
     }
+
+    /// <summary>
+    /// Handles invocation messages targeted at all connections.
+    /// </summary>
+    /// <param name="payload">The message payload containing the broadcast invocation data.</param>
+    /// <returns>A task that represents the handling operation.</returns>
     private async Task HandleInvocationAll(ReadOnlyMemory<byte> payload)
     {
         var invocation = _protocol.ReadInvocationAll(payload);
         await ExecuteInvocation(invocation, _connections);
     }
 
-    
+    /// <summary>
+    /// Handles group management commands (add/remove connections from groups).
+    /// </summary>
+    /// <param name="payload">The message payload containing the group command data.</param>
+    /// <returns>A task that represents the handling operation.</returns>
     private async Task HandleGroup(ReadOnlyMemory<byte> payload)
     {
         var groupMessage = _protocol.ReadGroupCommand(payload);
@@ -552,6 +716,12 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         // Send an ack to the server that sent the original command.
         await PublishAsync(MessageType.Ack, _protocol.WriteAck(groupMessage.Id, groupMessage.ServerName));
     }
+
+    /// <summary>
+    /// Handles acknowledgment messages from other servers.
+    /// </summary>
+    /// <param name="payload">The message payload containing the acknowledgment data.</param>
+    /// <returns>A task that represents the handling operation.</returns>
     private Task HandleAck(ReadOnlyMemory<byte> payload)
     {
         var ack = _protocol.ReadAck(payload);
@@ -560,10 +730,15 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         return Task.CompletedTask;
     }
 
-    
+    /// <summary>
+    /// Executes an invocation on all specified connections, excluding any specified connection IDs.
+    /// </summary>
+    /// <param name="invocation">The invocation to execute.</param>
+    /// <param name="connections">The connections to send the invocation to.</param>
+    /// <returns>A task that represents the execution operation.</returns>
     private static async Task ExecuteInvocation(SqlServerInvocation invocation, HubConnectionStore? connections)
     {
-        if(connections == null) return;
+        if (connections == null) return;
         var tasks = new List<Task>(connections.Count);
         foreach (var connection in connections)
         {
@@ -576,6 +751,11 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         await Task.WhenAll(tasks);
     }
 
+    /// <summary>
+    /// Generates a unique server name for this server instance.
+    /// Combines the machine name with a GUID for uniqueness across deployments.
+    /// </summary>
+    /// <returns>A unique server name string.</returns>
     private static string GenerateServerName()
     {
         // Use the machine name for convenient diagnostics, but add a guid to make it unique.
@@ -583,20 +763,49 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
         return $"{Environment.MachineName}_{Guid.NewGuid():N}";
     }
 
+    /// <summary>
+    /// Feature interface for tracking SignalR groups associated with a connection.
+    /// </summary>
     private interface ISqlFeature
     {
+        /// <summary>
+        /// Gets the collection of group names that this connection belongs to.
+        /// </summary>
         HashSet<string> Groups { get; }
     }
 
+    /// <summary>
+    /// Implementation of <see cref="ISqlFeature"/> that tracks SignalR groups for a connection.
+    /// </summary>
     private class SqlFeature : ISqlFeature
     {
+        /// <inheritdoc />
         public HashSet<string> Groups { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     }
-    
-    public record Message(int Id, byte[] Payload, DateTime InsertedOn);
-    
-    public record Notification(Message Message, string Channel, int PID);
-    
+
+    /// <summary>
+    /// Represents a message stored in the PostgreSQL database.
+    /// </summary>
+    /// <param name="Id">The unique identifier of the message.</param>
+    /// <param name="Payload">The binary payload containing the serialized message data.</param>
+    /// <param name="InsertedOn">The timestamp when the message was inserted into the database.</param>
+    private record Message(int Id, byte[] Payload, DateTime InsertedOn);
+
+    /// <summary>
+    /// Represents a notification received from PostgreSQL's LISTEN/NOTIFY mechanism.
+    /// </summary>
+    /// <param name="Message">The message data extracted from the notification.</param>
+    /// <param name="Channel">The notification channel name.</param>
+    /// <param name="PID">The PostgreSQL process ID that sent the notification.</param>
+    private record Notification(Message Message, string Channel, int PID);
+
+    /// <summary>
+    /// Publishes a message to the PostgreSQL backplane by inserting it into the messages table.
+    /// The database trigger will automatically notify other server instances.
+    /// </summary>
+    /// <param name="type">The type of message being published.</param>
+    /// <param name="payload">The serialized message payload.</param>
+    /// <returns>A task that represents the publishing operation.</returns>
     private async Task PublishAsync(MessageType type, byte[] payload)
     {
         try
@@ -604,28 +813,26 @@ public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDispo
             // Only ensure initialization on first call, prevent recursion
             if (!_isInitialized)
             {
-                Console.WriteLine("[Publish] Initializing PostgreSQL backplane before publishing");
+                _logger.LogDebug("Initializing PostgreSQL backplane before publishing");
                 await EnsurePostgresInitializedAsync();
             }
-            
-            Console.WriteLine($"[Publish] Publishing message of type {type}");
-            _logger.LogInformation("Published message of type {MessageType}", type);
+
+            _logger.LogTrace("Publishing message of type {MessageType}", type);
 
             // Use the shared data source for connection pooling
             var schema = _options.Value.SchemaName;
             var tableName = $"{_options.Value.TableSlugGenerator(typeof(THub))}_Messages";
-            
+
             var insertSql = $@"INSERT INTO ""{schema}"".""{tableName}"" (""Payload"") VALUES (@payload)";
-            
-            Console.WriteLine($"[Publish] Executing SQL: {insertSql}");
+
+            _logger.LogTrace("Executing SQL: {InsertSql}", insertSql);
             await using var cmd = _dataSource.CreateCommand(insertSql);
             cmd.Parameters.AddWithValue("@payload", payload);
             var rowsAffected = await cmd.ExecuteNonQueryAsync(_cancellationTokenSource.Token);
-            Console.WriteLine($"[Publish] Message inserted successfully. Rows affected: {rowsAffected}");
+            _logger.LogTrace("Message inserted successfully. Rows affected: {RowsAffected}", rowsAffected);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Publish Error] Failed to publish message: {ex.Message}");
             _logger.LogError(ex, "Failed to publish message of type {MessageType}", type);
             throw;
         }
