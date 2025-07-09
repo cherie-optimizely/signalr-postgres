@@ -1,4 +1,4 @@
-﻿using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres;
+﻿using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Polling;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using System.Collections.Concurrent;
