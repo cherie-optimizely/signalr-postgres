@@ -158,9 +158,8 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         private async Task<int> GetLastPayloadId()
         {
             try
-        {
-                var connection = new NpgsqlConnection(_options.ConnectionString);
-
+            {
+                await using var connection = new NpgsqlConnection(_options.ConnectionString);
                 await connection.OpenAsync();
 
                 await using (var command = new NpgsqlCommand("SELECT COALESCE(MAX(\"PayloadId\"), 0) FROM \"SignalR\".\"Messages\";", connection))
@@ -186,9 +185,8 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         {
             var recordCount = 0;
 
-            var connection = new NpgsqlConnection(_options.ConnectionString);
-            await connection.OpenAsync();
-
+            await using var connection = new NpgsqlConnection(_options.ConnectionString);
+await connection.OpenAsync();
 
             await using var command = new NpgsqlCommand("SELECT \"PayloadId\", \"Payload\", \"InsertedOn\" FROM \"SignalR\".\"Messages\" WHERE \"PayloadId\" > (@p);", connection);
             command.Parameters.AddWithValue("p", _lastPayloadId ?? 0);

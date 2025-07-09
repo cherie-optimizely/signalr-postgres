@@ -22,13 +22,12 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
             logger.LogInformation("{HubName}: Start installing SignalR SQL postgres objects", tracePrefix);
             try
             {
-                var connection = new NpgsqlConnection(options.ConnectionString);
+                await using var connection = new NpgsqlConnection(options.ConnectionString);
 
                 await connection.OpenAsync();
 
                 if (options.AutoInstallSchema)
                 {
-
                     var script = GetType().Assembly.StringResource("install.sql");
 
                     // Insert some data

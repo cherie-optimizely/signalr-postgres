@@ -21,7 +21,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
 
         public async Task Send(byte[] message)
         {
-            var connection = new NpgsqlConnection(_options.ConnectionString);
+            await using var connection = new NpgsqlConnection(_options.ConnectionString);
 
             await connection.OpenAsync();
 
