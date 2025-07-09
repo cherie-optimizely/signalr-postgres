@@ -7,12 +7,12 @@ using Xunit;
 
 namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
 {
-    public class SqlServerProtocolTests
+    public class PostgresProtocolTests
     {
         [Fact]
         public void InvocationAllRoundTrips()
         {
-            var sut = new SqlServerProtocol(CreateHubMessageSerializer());
+            var sut = new PostgresProtocol(CreateHubMessageSerializer());
             var encoded = sut.WriteInvocationAll("Method", new object[] { "s" }, new[] { "excluded" });
             var decoded = sut.ReadInvocationAll(encoded);
 
@@ -30,7 +30,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
         [InlineData(MessageType.InvocationUser)]
         internal void TargetedInvocationRoundTrips(MessageType type)
         {
-            var sut = new SqlServerProtocol(CreateHubMessageSerializer());
+            var sut = new PostgresProtocol(CreateHubMessageSerializer());
             var encoded = sut.WriteTargetedInvocation(type, "target", "Method", new object[] { "s" }, new[] { "excluded" });
             var decoded = sut.ReadTargetedInvocation(encoded);
 
@@ -46,7 +46,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
         [Fact]
         internal void AckRoundTrips()
         {
-            var sut = new SqlServerProtocol(CreateHubMessageSerializer());
+            var sut = new PostgresProtocol(CreateHubMessageSerializer());
             var encoded = sut.WriteAck(42, "server1");
             var decoded = sut.ReadAck(encoded);
 
@@ -58,8 +58,8 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
         [Fact]
         internal void GroupRoundTrips()
         {
-            var sut = new SqlServerProtocol(CreateHubMessageSerializer());
-            var command = new SqlServerGroupCommand(42, "server1", GroupAction.Add, "groupName", "connection");
+            var sut = new PostgresProtocol(CreateHubMessageSerializer());
+            var command = new PostgresGroupCommand(42, "server1", GroupAction.Add, "groupName", "connection");
             var encoded = sut.WriteGroupCommand(command);
             var decoded = sut.ReadGroupCommand(encoded);
 

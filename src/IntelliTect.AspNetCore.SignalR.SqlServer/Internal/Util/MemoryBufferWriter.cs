@@ -3,14 +3,9 @@
 
 #nullable enable
 
-using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
 {

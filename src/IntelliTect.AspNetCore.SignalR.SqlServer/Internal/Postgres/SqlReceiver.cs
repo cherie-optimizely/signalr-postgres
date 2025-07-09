@@ -74,13 +74,13 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
 
             if (_cts.IsCancellationRequested) return;
 
-            if (_options.Mode.HasFlag(SqlServerMessageMode.Polling))
+            if (_options.Mode.HasFlag(PostgresMessageMode.Polling))
             {
                 await PollingLoop(_cts.Token);
             }
             else
             {
-                throw new InvalidOperationException("None of the configured SqlServerMessageMode are suitable for use.");
+                throw new InvalidOperationException("None of the configured PostgresMessageMode are suitable for use.");
             }
         }
 
@@ -216,11 +216,11 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
 
             if (id > _lastPayloadId + 1)
             {
-                _logger.LogError("{HubStream}: Missed message(s) from SQL Server. Expected payload ID {1} but got {2}.", _tracePrefix, _lastPayloadId + 1, id);
+                _logger.LogError("{HubStream}: Missed message(s) from Postgres. Expected payload ID {1} but got {2}.", _tracePrefix, _lastPayloadId + 1, id);
             }
             else if (id <= _lastPayloadId)
             {
-                _logger.LogInformation("{HubStream}: Duplicate message(s) or payload ID reset from SQL Server. Last payload ID {1}, this payload ID {2}", _tracePrefix, _lastPayloadId, id);
+                _logger.LogInformation("{HubStream}: Duplicate message(s) or payload ID reset from Postgres. Last payload ID {1}, this payload ID {2}", _tracePrefix, _lastPayloadId, id);
             }
 
             _lastPayloadId = id;
