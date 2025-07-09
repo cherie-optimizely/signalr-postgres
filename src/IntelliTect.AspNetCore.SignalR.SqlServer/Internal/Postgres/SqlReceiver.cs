@@ -26,7 +26,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         private CancellationTokenSource _cts = new();
         private bool _notificationsDisabled;
 
-        private readonly SqlServerOptions _options;
+        private readonly PostgresOptions _options;
         private readonly string _tableName;
         private readonly ILogger _logger;
         private readonly string _tracePrefix;
@@ -37,7 +37,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         private readonly string _maxIdSql = "SELECT [PayloadId] FROM [{0}].[{1}_Id]";
         private readonly string _selectSql = "SELECT [PayloadId], [Payload], [InsertedOn] FROM [{0}].[{1}] WHERE [PayloadId] > @PayloadId";
 
-        public SqlReceiver(SqlServerOptions options, ILogger logger, string tableName, string tracePrefix)
+        public SqlReceiver(PostgresOptions options, ILogger logger, string tableName, string tracePrefix)
         {
             _options = options;
             _tableName = tableName;

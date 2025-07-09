@@ -10,9 +10,9 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
     {
         private readonly string _insertDml;
         private readonly ILogger _logger;
-        private readonly SqlServerOptions _options;
+        private readonly PostgresOptions _options;
 
-        public SqlSender(SqlServerOptions options, ILogger logger, string tableName)
+        public SqlSender(PostgresOptions options, ILogger logger, string tableName)
         {
             _options = options;
             _insertDml = GetType().Assembly.StringResource("send.sql");

@@ -26,7 +26,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
         private readonly SqlServerSubscriptionManager _groups = new SqlServerSubscriptionManager();
         private readonly SqlServerSubscriptionManager _users = new SqlServerSubscriptionManager();
         private readonly ILogger _logger;
-        private readonly SqlServerOptions _options;
+        private readonly PostgresOptions _options;
         private readonly string _serverName = GenerateServerName();
         private readonly SqlServerProtocol _protocol;
         private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(1);
@@ -42,14 +42,14 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
         /// Constructs the <see cref="SqlServerHubLifetimeManager{THub}"/> with types from Dependency Injection.
         /// </summary>
         /// <param name="logger">The logger to write information about what the class is doing.</param>
-        /// <param name="options">The <see cref="SqlServerOptions"/> that influence behavior of the SQL Server connection.</param>
+        /// <param name="options">The <see cref="PostgresOptions"/> that influence behavior of the SQL Server connection.</param>
         /// <param name="hubProtocolResolver">The <see cref="IHubProtocolResolver"/> to get an <see cref="IHubProtocol"/> instance when writing to connections.</param>
         /// <param name="globalHubOptions">The global <see cref="HubOptions"/>.</param>
         /// <param name="hubOptions">The <typeparamref name="THub"/> specific options.</param>
         /// <param name="lifetime">The host lifetime instance</param>
         public SqlServerHubLifetimeManager(
             ILogger<SqlServerHubLifetimeManager<THub>> logger,
-            IOptions<SqlServerOptions> options,
+            IOptions<PostgresOptions> options,
             IHubProtocolResolver hubProtocolResolver,
             IOptions<HubOptions>? globalHubOptions,
             IOptions<HubOptions<THub>>? hubOptions,

@@ -13,7 +13,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         private readonly SqlReceiver _receiver;
         private readonly string _tracePrefix;
 
-        public SqlStream(SqlServerOptions options, ILogger logger, int streamIndex, string tableName, string tracePrefix)
+        public SqlStream(PostgresOptions options, ILogger logger, int streamIndex, string tableName, string tracePrefix)
         {
             _streamIndex = streamIndex;
             _logger = logger;

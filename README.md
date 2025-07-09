@@ -69,10 +69,10 @@ services
     });
 ```
 
-Alternatively, you may configure `IntelliTect.AspNetCore.SignalR.SqlServer.SqlServerOptions` with [the Options pattern](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?view=aspnetcore-5.0).
+Alternatively, you may configure `IntelliTect.AspNetCore.SignalR.SqlServer.PostgresOptions` with [the Options pattern](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?view=aspnetcore-5.0).
 
 ``` cs
-services.Configure<SqlServerOptions>(Configuration.GetSection("SignalR:SqlServer"));
+services.Configure<PostgresOptions>(Configuration.GetSection("SignalR:SqlServer"));
 ```
 
 ## Caveats

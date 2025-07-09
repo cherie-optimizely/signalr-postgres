@@ -41,7 +41,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="signalrBuilder">The <see cref="ISignalRServerBuilder"/>.</param>
         /// <param name="configure">A callback to configure the SQL Server options.</param>
         /// <returns>The same instance of the <see cref="ISignalRServerBuilder"/> for chaining.</returns>
-        public static ISignalRServerBuilder AddSqlServer(this ISignalRServerBuilder signalrBuilder, Action<SqlServerOptions> configure)
+        public static ISignalRServerBuilder AddSqlServer(this ISignalRServerBuilder signalrBuilder, Action<PostgresOptions> configure)
         {
             signalrBuilder.Services.Configure(configure);
             signalrBuilder.Services.AddSingleton(typeof(HubLifetimeManager<>), typeof(SqlServerHubLifetimeManager<>));
@@ -55,7 +55,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="connectionString">The connection string used to connect to the SQL Server.</param>
         /// <param name="configure">A callback to configure the SQL Server options.</param>
         /// <returns>The same instance of the <see cref="ISignalRServerBuilder"/> for chaining.</returns>
-        public static ISignalRServerBuilder AddSqlServer(this ISignalRServerBuilder signalrBuilder, string connectionString, Action<SqlServerOptions> configure)
+        public static ISignalRServerBuilder AddSqlServer(this ISignalRServerBuilder signalrBuilder, string connectionString, Action<PostgresOptions> configure)
         {
             return AddSqlServer(signalrBuilder, o =>
             {

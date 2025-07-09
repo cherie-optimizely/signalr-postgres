@@ -8,7 +8,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
     /// <summary>
     /// Options used to configure <see cref="SqlServerHubLifetimeManager{THub}"/>.
     /// </summary>
-    public class SqlServerOptions
+    public class PostgresOptions
     {
         /// <summary>
         /// Shared lock to prevent multiple concurrent installs against the same DB.
