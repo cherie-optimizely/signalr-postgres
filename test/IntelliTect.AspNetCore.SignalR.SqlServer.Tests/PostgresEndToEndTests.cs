@@ -6,7 +6,7 @@ using Xunit;
 
 namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
 {
-    public class SqlServerEndToEndTests
+    public class PostgresEndToEndTests
     {
         private const string databaseName = "SignalRUnitTestsDb";
         private const string username = "postgres";
@@ -25,7 +25,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
             {
                 ConnectionString = connectionString,
                 AutoEnableServiceBroker = true,
-                Mode = SqlServerMessageMode.ServiceBroker
+                Mode = PostgresMessageMode.ServiceBroker
             };
 
             var prefix = nameof(CanSendAndReceivePayloads_WithServiceBroker);
@@ -40,7 +40,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
             var options = new PostgresOptions
             {
                 ConnectionString = connectionString,
-                Mode = SqlServerMessageMode.Polling
+                Mode = PostgresMessageMode.Polling
             };
 
             var prefix = nameof(CanSendAndReceivePayloads_WithPolling);
@@ -57,7 +57,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
             {
                 ConnectionString = connectionString,
                 AutoEnableServiceBroker = true,
-                Mode = SqlServerMessageMode.ServiceBroker
+                Mode = PostgresMessageMode.ServiceBroker
             };
 
             var prefix = nameof(CanSendAndReceivePayloads_WithServiceBroker_UnderHeavyLoad);
@@ -160,7 +160,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
         //     }
         //     catch (SqlException ex) when (
         //         ex.Number == 53 
-        //         || ex.Message.Contains("Could not open a connection to SQL Server")
+        //         || ex.Message.Contains("Could not open a connection to Postgres")
         //         || ex.Message.Contains("The server was not found or was not accessible")
         //     )
         //     {

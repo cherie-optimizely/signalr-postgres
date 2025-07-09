@@ -30,7 +30,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
 
         public Task Send(byte[] message)
         {
-            _logger.LogTrace("{HubStream}: Saving payload to SQL server", _tracePrefix);
+            _logger.LogTrace("{HubStream}: Saving payload to Postgres", _tracePrefix);
 
             return _sender.Send(message);
         }

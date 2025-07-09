@@ -8,13 +8,13 @@ using System.Threading.Tasks;
 namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Messages
 {
 
-    internal readonly struct SqlServerTargetedInvocation
+    internal readonly struct PostgresTargetedInvocation
     {
         public string Target { get; }
 
-        public SqlServerInvocation Invocation { get; }
+        public PostgresInvocation Invocation { get; }
 
-        public SqlServerTargetedInvocation(string target, SqlServerInvocation invocation)
+        public PostgresTargetedInvocation(string target, PostgresInvocation invocation)
         {
             Target = target;
             Invocation = invocation;

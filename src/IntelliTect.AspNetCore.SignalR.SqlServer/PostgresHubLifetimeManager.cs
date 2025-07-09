@@ -17,18 +17,18 @@ using Microsoft.Extensions.Hosting;
 namespace IntelliTect.AspNetCore.SignalR.SqlServer
 {
     /// <summary>
-    /// The SQL Server scaleout provider for multi-server support.
+    /// The Postgres scaleout provider for multi-server support.
     /// </summary>
     /// <typeparam name="THub">The type of <see cref="Hub"/> to manage connections for.</typeparam>
-    public class SqlServerHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposable where THub : Hub
+    public class PostgresHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposable where THub : Hub
     {
         private readonly HubConnectionStore _connections = new HubConnectionStore();
-        private readonly SqlServerSubscriptionManager _groups = new SqlServerSubscriptionManager();
-        private readonly SqlServerSubscriptionManager _users = new SqlServerSubscriptionManager();
+        private readonly PostgresSubscriptionManager _groups = new PostgresSubscriptionManager();
+        private readonly PostgresSubscriptionManager _users = new PostgresSubscriptionManager();
         private readonly ILogger _logger;
         private readonly PostgresOptions _options;
         private readonly string _serverName = GenerateServerName();
-        private readonly SqlServerProtocol _protocol;
+        private readonly PostgresProtocol _protocol;
         private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(1);
         private readonly List<SqlStream> _streams = new List<SqlStream>();
 
@@ -39,16 +39,16 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
         private bool _disposed;
 
         /// <summary>
-        /// Constructs the <see cref="SqlServerHubLifetimeManager{THub}"/> with types from Dependency Injection.
+        /// Constructs the <see cref="PostgresHubLifetimeManager{THub}"/> with types from Dependency Injection.
         /// </summary>
         /// <param name="logger">The logger to write information about what the class is doing.</param>
-        /// <param name="options">The <see cref="PostgresOptions"/> that influence behavior of the SQL Server connection.</param>
+        /// <param name="options">The <see cref="PostgresOptions"/> that influence behavior of the Postgres connection.</param>
         /// <param name="hubProtocolResolver">The <see cref="IHubProtocolResolver"/> to get an <see cref="IHubProtocol"/> instance when writing to connections.</param>
         /// <param name="globalHubOptions">The global <see cref="HubOptions"/>.</param>
         /// <param name="hubOptions">The <typeparamref name="THub"/> specific options.</param>
         /// <param name="lifetime">The host lifetime instance</param>
-        public SqlServerHubLifetimeManager(
-            ILogger<SqlServerHubLifetimeManager<THub>> logger,
+        public PostgresHubLifetimeManager(
+            ILogger<PostgresHubLifetimeManager<THub>> logger,
             IOptions<PostgresOptions> options,
             IHubProtocolResolver hubProtocolResolver,
             IOptions<HubOptions>? globalHubOptions,
@@ -64,25 +64,25 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
 
             if (globalHubOptions != null && hubOptions != null)
             {
-                _protocol = new SqlServerProtocol(new DefaultHubMessageSerializer(hubProtocolResolver, globalHubOptions.Value.SupportedProtocols, hubOptions.Value.SupportedProtocols));
+                _protocol = new PostgresProtocol(new DefaultHubMessageSerializer(hubProtocolResolver, globalHubOptions.Value.SupportedProtocols, hubOptions.Value.SupportedProtocols));
             }
             else
             {
                 var supportedProtocols = hubProtocolResolver.AllProtocols.Select(p => p.Name).ToList();
-                _protocol = new SqlServerProtocol(new DefaultHubMessageSerializer(hubProtocolResolver, supportedProtocols, null));
+                _protocol = new PostgresProtocol(new DefaultHubMessageSerializer(hubProtocolResolver, supportedProtocols, null));
             }
 
             // Delay until startup so the application can have a chance to create the database
             // if the application does that in Program.cs before app.Run().
-            lifetime.ApplicationStarted.Register(() => _ = EnsureSqlServerConnection());
+            lifetime.ApplicationStarted.Register(() => _ = EnsurePostgresConnection());
         }
 
         /// <inheritdoc />
         public override async Task OnConnectedAsync(HubConnectionContext connection)
         {
-            await EnsureSqlServerConnection();
-            var feature = new SqlServerFeature();
-            connection.Features.Set<ISqlServerFeature>(feature);
+            await EnsurePostgresConnection();
+            var feature = new PostgresFeature();
+            connection.Features.Set<IPostgresFeature>(feature);
 
             var userTask = Task.CompletedTask;
 
@@ -103,7 +103,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
 
             var tasks = new List<Task>();
 
-            var feature = connection.Features.Get<ISqlServerFeature>()!;
+            var feature = connection.Features.Get<IPostgresFeature>()!;
             if (feature is null) return Task.CompletedTask;
 
             var groupNames = feature.Groups;
@@ -298,7 +298,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
 
         private async Task PublishAsync(MessageType type, byte[] payload)
         {
-            await EnsureSqlServerConnection();
+            await EnsurePostgresConnection();
             _logger.Published(type.ToString());
 
             var streamIndex = new Random().Next(0, _streams.Count);
@@ -307,7 +307,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
 
         private Task AddGroupAsyncCore(HubConnectionContext connection, string groupName)
         {
-            var feature = connection.Features.Get<ISqlServerFeature>()!;
+            var feature = connection.Features.Get<IPostgresFeature>()!;
             var groupNames = feature.Groups;
 
             lock (groupNames)
@@ -330,7 +330,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
         {
             await _groups.RemoveSubscriptionAsync(groupName, connection);
 
-            var feature = connection.Features.Get<ISqlServerFeature>()!;
+            var feature = connection.Features.Get<IPostgresFeature>()!;
             var groupNames = feature.Groups;
             if (groupNames != null)
             {
@@ -346,7 +346,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
             var id = Interlocked.Increment(ref _internalId);
             var ack = _ackHandler.CreateAck(id);
             // Send Add/Remove Group to other servers and wait for an ack or timeout
-            var message = _protocol.WriteGroupCommand(new SqlServerGroupCommand(id, _serverName, action, groupName, connectionId));
+            var message = _protocol.WriteGroupCommand(new PostgresGroupCommand(id, _serverName, action, groupName, connectionId));
             await PublishAsync(MessageType.Group, message);
 
             await ack;
@@ -363,7 +363,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
             _ackHandler.Dispose();
         }
 
-        private async Task EnsureSqlServerConnection()
+        private async Task EnsurePostgresConnection()
         {
             if (_streams.Count == 0)
             {
@@ -400,7 +400,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
                                     {
                                         if (_disposed) return;
 
-                                        _logger.LogError(t.Exception, "{0}The SQL Server SignalR message receiver encountered an error.", tracePrefix);
+                                        _logger.LogError(t.Exception, "{0}The Postgres SignalR message receiver encountered an error.", tracePrefix);
 
                                         // Try again in a little bit
                                         await Task.Delay(2000);
@@ -423,7 +423,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
             var messageType = _protocol.ReadMessageType(message);
             List<Task> tasks;
             HubConnectionStore? connections;
-            SqlServerInvocation invocation;
+            PostgresInvocation invocation;
 
             _logger.Received(messageType.ToString());
 
@@ -509,12 +509,12 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer
             return $"{Environment.MachineName}_{Guid.NewGuid():N}";
         }
 
-        private interface ISqlServerFeature
+        private interface IPostgresFeature
         {
             HashSet<string> Groups { get; }
         }
 
-        private class SqlServerFeature : ISqlServerFeature
+        private class PostgresFeature : IPostgresFeature
         {
             public HashSet<string> Groups { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
