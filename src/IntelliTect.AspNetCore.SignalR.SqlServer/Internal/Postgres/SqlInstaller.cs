@@ -6,7 +6,7 @@ using Npgsql;
 
 namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
 {
-    internal class SqlInstaller(SqlServerOptions options, ILogger logger, string messagesTableNamePrefix, string tracePrefix)
+    internal class SqlInstaller(PostgresOptions options, ILogger logger, string messagesTableNamePrefix, string tracePrefix)
     {
         private const int SchemaVersion = 1;
 

@@ -32,7 +32,7 @@ builder.Services.AddSignalR()
         o.SchemaName = "SignalRCore";
     });
 
-builder.Services.AddOptions<SqlServerOptions>().Configure<IConfiguration>((o, config) =>
+builder.Services.AddOptions<PostgresOptions>().Configure<IConfiguration>((o, config) =>
 {
     o.ConnectionString = connectionString;
 });

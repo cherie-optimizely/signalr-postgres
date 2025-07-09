@@ -21,7 +21,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
         {
             await CreateDatabaseAsync();
 
-            var options = new SqlServerOptions
+            var options = new PostgresOptions
             {
                 ConnectionString = connectionString,
                 AutoEnableServiceBroker = true,
@@ -37,7 +37,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
         {
             await CreateDatabaseAsync();
 
-            var options = new SqlServerOptions
+            var options = new PostgresOptions
             {
                 ConnectionString = connectionString,
                 Mode = SqlServerMessageMode.Polling
@@ -53,7 +53,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
         {
             await CreateDatabaseAsync();
 
-            var options = new SqlServerOptions
+            var options = new PostgresOptions
             {
                 ConnectionString = connectionString,
                 AutoEnableServiceBroker = true,
@@ -111,7 +111,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
             await receiverTask;
         }
 
-        private async Task RunCore(SqlServerOptions options, string prefix)
+        private async Task RunCore(PostgresOptions options, string prefix)
         {
             var installer = new SqlInstaller(options, NullLogger.Instance, prefix, prefix);
             var sender = new SqlSender(options, NullLogger.Instance, prefix + "_0");
