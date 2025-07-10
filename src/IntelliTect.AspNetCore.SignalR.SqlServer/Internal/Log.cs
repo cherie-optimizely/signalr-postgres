@@ -12,12 +12,12 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
         //private static readonly LogDefineOptions SkipEnabledCheckLogOptions = new() { SkipEnabledCheck = true };
 
         private static readonly Action<ILogger, string, Exception?> _received =
-            LoggerMessage.Define<string>(LogLevel.Trace, new EventId(1, "ReceivedFromSqlServer"), 
-                "Received {Type} message from SQL Server.");
+            LoggerMessage.Define<string>(LogLevel.Trace, new EventId(1, "ReceivedFromPostgres"),
+                "Received {Type} message from Postgres.");
 
         private static readonly Action<ILogger, string, Exception?> _publish =
-            LoggerMessage.Define<string>(LogLevel.Trace, new EventId(2, "PublishToSqlServer"), 
-                "Publishing {Type} message to SQL Server.");
+            LoggerMessage.Define<string>(LogLevel.Trace, new EventId(2, "PublishToPostgres"),
+                "Publishing {Type} message to Postgres.");
 
         private static readonly Action<ILogger, Exception> _internalMessageFailed =
             LoggerMessage.Define(LogLevel.Warning, new EventId(3, "InternalMessageFailed"), 

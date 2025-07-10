@@ -4,15 +4,15 @@
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
+namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Polling
 {
     internal class SqlSender
     {
         private readonly string _insertDml;
         private readonly ILogger _logger;
-        private readonly SqlServerOptions _options;
+        private readonly PostgresOptions _options;
 
-        public SqlSender(SqlServerOptions options, ILogger logger, string tableName)
+        public SqlSender(PostgresOptions options, ILogger logger, string tableName)
         {
             _options = options;
             _insertDml = GetType().Assembly.StringResource("send.sql");

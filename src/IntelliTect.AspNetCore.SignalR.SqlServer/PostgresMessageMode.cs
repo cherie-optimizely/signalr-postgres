@@ -4,13 +4,13 @@
 namespace IntelliTect.AspNetCore.SignalR.SqlServer
 {
     /// <summary>
-    /// Specifies the allowed modes of acquiring scaleout messages from SQL Server.
+    /// Specifies the allowed modes of acquiring scaleout messages from Postgres.
     /// </summary>
     [Flags]
-    public enum SqlServerMessageMode
+    public enum PostgresMessageMode
     {
         /// <summary>
-        /// Use SQL Server Service Broker for discovering when new messages are available.
+        /// Use Postgres Service Broker for discovering when new messages are available.
         /// </summary>
         ServiceBroker = 1 << 0,
 

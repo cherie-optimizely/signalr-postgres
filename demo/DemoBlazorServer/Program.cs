@@ -10,10 +10,9 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services.AddSignalR()
-    .AddSqlServer(o =>
+    .AddPostgres(o =>
     {
         o.ConnectionString = builder.Configuration.GetConnectionString("Default")!;
-        o.AutoEnableServiceBroker = true;
         o.TableSlugGenerator = hubType => hubType.Name;
         o.TableCount = 1;
         o.SchemaName = "SignalRCore";

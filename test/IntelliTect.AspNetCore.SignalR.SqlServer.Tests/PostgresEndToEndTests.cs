@@ -1,4 +1,4 @@
-﻿using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres;
+﻿using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Polling;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using System.Collections.Concurrent;
@@ -6,7 +6,7 @@ using Xunit;
 
 namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
 {
-    public class SqlServerEndToEndTests
+    public class PostgresEndToEndTests
     {
         private const string databaseName = "SignalRUnitTestsDb";
         private const string username = "postgres";
@@ -21,11 +21,11 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
         {
             await CreateDatabaseAsync();
 
-            var options = new SqlServerOptions
+            var options = new PostgresOptions
             {
                 ConnectionString = connectionString,
                 AutoEnableServiceBroker = true,
-                Mode = SqlServerMessageMode.ServiceBroker
+                Mode = PostgresMessageMode.ServiceBroker
             };
 
             var prefix = nameof(CanSendAndReceivePayloads_WithServiceBroker);
@@ -37,10 +37,10 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
         {
             await CreateDatabaseAsync();
 
-            var options = new SqlServerOptions
+            var options = new PostgresOptions
             {
                 ConnectionString = connectionString,
-                Mode = SqlServerMessageMode.Polling
+                Mode = PostgresMessageMode.Polling
             };
 
             var prefix = nameof(CanSendAndReceivePayloads_WithPolling);
@@ -53,11 +53,11 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
         {
             await CreateDatabaseAsync();
 
-            var options = new SqlServerOptions
+            var options = new PostgresOptions
             {
                 ConnectionString = connectionString,
                 AutoEnableServiceBroker = true,
-                Mode = SqlServerMessageMode.ServiceBroker
+                Mode = PostgresMessageMode.ServiceBroker
             };
 
             var prefix = nameof(CanSendAndReceivePayloads_WithServiceBroker_UnderHeavyLoad);
@@ -111,7 +111,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
             await receiverTask;
         }
 
-        private async Task RunCore(SqlServerOptions options, string prefix)
+        private async Task RunCore(PostgresOptions options, string prefix)
         {
             var installer = new SqlInstaller(options, NullLogger.Instance, prefix, prefix);
             var sender = new SqlSender(options, NullLogger.Instance, prefix + "_0");
@@ -160,7 +160,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
         //     }
         //     catch (SqlException ex) when (
         //         ex.Number == 53 
-        //         || ex.Message.Contains("Could not open a connection to SQL Server")
+        //         || ex.Message.Contains("Could not open a connection to Postgres")
         //         || ex.Message.Contains("The server was not found or was not accessible")
         //     )
         //     {

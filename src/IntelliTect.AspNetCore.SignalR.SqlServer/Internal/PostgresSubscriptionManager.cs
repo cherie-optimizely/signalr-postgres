@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
 {
-    internal class SqlServerSubscriptionManager
+    internal class PostgresSubscriptionManager
     {
         private readonly ConcurrentDictionary<string, HubConnectionStore> _subscriptions = new ConcurrentDictionary<string, HubConnectionStore>(StringComparer.Ordinal);
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);

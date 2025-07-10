@@ -18,7 +18,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
         public static string StringResource(this Assembly assembly, string name)
         {
             string resource;
-            name = "IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres." + name;
+            name = "IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Polling." + name;
             using (var resourceStream = assembly.GetManifestResourceStream(name))
             {
                 if (resourceStream == null) throw new ArgumentException("Resource not found", nameof(name));
