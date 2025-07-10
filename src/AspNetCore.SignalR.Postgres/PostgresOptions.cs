@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer
+namespace AspNetCore.SignalR.Postgres
 {
     /// <summary>
     /// Options used to configure <see cref="PostgresHubLifetimeManager{THub}"/>.

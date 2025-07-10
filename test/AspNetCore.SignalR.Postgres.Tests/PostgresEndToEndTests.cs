@@ -1,10 +1,10 @@
-﻿using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Polling;
+﻿using AspNetCore.SignalR.Postgres.Internal.Polling;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using System.Collections.Concurrent;
 using Xunit;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
+namespace AspNetCore.SignalR.Postgres.Tests
 {
     public class PostgresEndToEndTests
     {

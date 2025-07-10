@@ -4,7 +4,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Protocol;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
+namespace AspNetCore.SignalR.Postgres.Internal
 {
     internal class DefaultHubMessageSerializer
     {

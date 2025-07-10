@@ -5,7 +5,7 @@ using System;
 using System.IO;
 using System.Reflection;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
+namespace AspNetCore.SignalR.Postgres.Internal
 {
     internal static class AssemblyExtensions
     {
@@ -18,7 +18,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
         public static string StringResource(this Assembly assembly, string name)
         {
             string resource;
-            name = "IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Polling." + name;
+            name = "AspNetCore.SignalR.Postgres.Internal.Polling." + name;
             using (var resourceStream = assembly.GetManifestResourceStream(name))
             {
                 if (resourceStream == null) throw new ArgumentException("Resource not found", nameof(name));

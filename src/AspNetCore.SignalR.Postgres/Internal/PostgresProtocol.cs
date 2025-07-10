@@ -4,12 +4,12 @@
 using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Messages;
+using AspNetCore.SignalR.Postgres.Internal.Messages;
 using MessagePack;
 using Microsoft.AspNetCore.SignalR.Protocol;
 using Microsoft.AspNetCore.SignalR;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
+namespace AspNetCore.SignalR.Postgres.Internal
 {
     internal class PostgresProtocol
     {

@@ -5,7 +5,7 @@ using System;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
+namespace AspNetCore.SignalR.Postgres.Internal
 {
     internal static class Log
     {

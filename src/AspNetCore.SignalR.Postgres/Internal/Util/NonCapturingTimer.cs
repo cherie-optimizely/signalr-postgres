@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 #nullable enable
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
+namespace AspNetCore.SignalR.Postgres.Internal
 {
     // A convenience API for interacting with System.Threading.Timer in a way
     // that doesn't capture the ExecutionContext. We should be using this (or equivalent)

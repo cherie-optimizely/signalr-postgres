@@ -2,19 +2,19 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Globalization;
-using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Messages;
+using AspNetCore.SignalR.Postgres.Internal.Messages;
 using Microsoft.AspNetCore.SignalR.Protocol;
-using IntelliTect.AspNetCore.SignalR.SqlServer.Internal;
-using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Polling;
+using AspNetCore.SignalR.Postgres.Internal;
+using AspNetCore.SignalR.Postgres.Internal.Polling;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.SignalR;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Hosting;
 
-[assembly: InternalsVisibleTo("IntelliTect.AspNetCore.SignalR.SqlServer.Tests")]
+[assembly: InternalsVisibleTo("AspNetCore.SignalR.Postgres.Tests")]
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer
+namespace AspNetCore.SignalR.Postgres
 {
     /// <summary>
     /// The Postgres scaleout provider for multi-server support.

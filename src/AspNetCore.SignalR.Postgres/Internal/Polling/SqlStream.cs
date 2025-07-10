@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Polling
+namespace AspNetCore.SignalR.Postgres.Internal.Polling
 {
     internal class SqlStream : IDisposable
     {

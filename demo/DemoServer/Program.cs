@@ -1,5 +1,5 @@
 using DemoServer;
-using IntelliTect.AspNetCore.SignalR.SqlServer;
+using AspNetCore.SignalR.Postgres;
 using Microsoft.AspNetCore.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);

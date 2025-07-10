@@ -1,4 +1,4 @@
-﻿using IntelliTect.AspNetCore.SignalR;
+﻿using AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Messages
+namespace AspNetCore.SignalR.Postgres.Internal.Messages
 {
 
     internal readonly struct PostgresInvocation

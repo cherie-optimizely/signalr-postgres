@@ -3,7 +3,7 @@
 
 using System.Collections.Concurrent;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
+namespace AspNetCore.SignalR.Postgres.Internal
 {
     internal class AckHandler : IDisposable
     {

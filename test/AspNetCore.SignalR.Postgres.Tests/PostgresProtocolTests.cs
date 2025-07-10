@@ -1,11 +1,11 @@
-using IntelliTect.AspNetCore.SignalR.SqlServer.Internal;
-using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Messages;
+using AspNetCore.SignalR.Postgres.Internal;
+using AspNetCore.SignalR.Postgres.Internal.Messages;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Protocol;
 using System.Buffers;
 using Xunit;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
+namespace AspNetCore.SignalR.Postgres.Tests
 {
     public class PostgresProtocolTests
     {
