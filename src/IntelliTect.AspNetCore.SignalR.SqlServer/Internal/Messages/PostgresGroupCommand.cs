@@ -3,7 +3,7 @@
 
 namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Messages
 {
-    internal readonly struct SqlServerGroupCommand
+    internal readonly struct PostgresGroupCommand
     {
         /// <summary>
         /// Gets the ID of the group command.
@@ -30,7 +30,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Messages
         /// </summary>
         public string ConnectionId { get; }
 
-        public SqlServerGroupCommand(int id, string serverName, GroupAction action, string groupName, string connectionId)
+        public PostgresGroupCommand(int id, string serverName, GroupAction action, string groupName, string connectionId)
         {
             Id = id;
             ServerName = serverName;

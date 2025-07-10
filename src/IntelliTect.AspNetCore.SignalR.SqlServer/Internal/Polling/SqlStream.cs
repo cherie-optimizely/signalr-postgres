@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
+namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Polling
 {
     internal class SqlStream : IDisposable
     {
@@ -13,7 +13,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
         private readonly SqlReceiver _receiver;
         private readonly string _tracePrefix;
 
-        public SqlStream(SqlServerOptions options, ILogger logger, int streamIndex, string tableName, string tracePrefix)
+        public SqlStream(PostgresOptions options, ILogger logger, int streamIndex, string tableName, string tracePrefix)
         {
             _streamIndex = streamIndex;
             _logger = logger;
@@ -30,7 +30,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres
 
         public Task Send(byte[] message)
         {
-            _logger.LogTrace("{HubStream}: Saving payload to SQL server", _tracePrefix);
+            _logger.LogTrace("{HubStream}: Saving payload to Postgres", _tracePrefix);
 
             return _sender.Send(message);
         }
