@@ -1,0 +1,70 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-chat-server",
+            "command": "dotnet",
+            "type": "shell",
+            "args": ["build"],
+            "group": "build",
+            "options": {
+                "cwd": "${workspaceFolder}/examples/ChatServer"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "run-chat-server",
+            "command": "dotnet",
+            "type": "shell",
+            "args": ["run"],
+            "group": "build",
+            "options": {
+                "cwd": "${workspaceFolder}/examples/ChatServer"
+            },
+            "problemMatcher": "$msCompile",
+            "isBackground": true
+        },
+        {
+            "label": "build-chat-client",
+            "command": "dotnet",
+            "type": "shell",
+            "args": ["build"],
+            "group": "build",
+            "options": {
+                "cwd": "${workspaceFolder}/examples/ChatClient"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "run-chat-client",
+            "command": "dotnet",
+            "type": "shell",
+            "args": ["run"],
+            "group": "build",
+            "options": {
+                "cwd": "${workspaceFolder}/examples/ChatClient"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "start-postgres",
+            "command": "docker-compose",
+            "type": "shell",
+            "args": ["up", "-d"],
+            "group": "build",
+            "options": {
+                "cwd": "${workspaceFolder}/examples"
+            }
+        },
+        {
+            "label": "stop-postgres",
+            "command": "docker-compose",
+            "type": "shell",
+            "args": ["down"],
+            "group": "build",
+            "options": {
+                "cwd": "${workspaceFolder}/examples"
+            }
+        }
+    ]
+}
