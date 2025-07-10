@@ -109,7 +109,7 @@ internal class PostgresProtocol
         WriteHubMessage(ref writer, new InvocationMessage(methodName, args ?? Array.Empty<object[]>()));
     }
 
-    public SqlServerInvocation ReadInvocationAll(ReadOnlyMemory<byte> data)
+    public PostgresInvocation ReadInvocationAll(ReadOnlyMemory<byte> data)
     {
         // See WriteInvocation for the format
         var reader = new MessagePackReader(data);
@@ -119,7 +119,7 @@ internal class PostgresProtocol
         return ReadInvocationCore(ref reader);
     }
 
-    private SqlServerInvocation ReadInvocationCore(ref MessagePackReader reader)
+    private PostgresInvocation ReadInvocationCore(ref MessagePackReader reader)
     {
         // Read excluded Ids
         IReadOnlyList<string>? excludedConnectionIds = null;
@@ -137,10 +137,10 @@ internal class PostgresProtocol
 
         // Read payload
         var message = ReadSerializedHubMessage(ref reader);
-        return new SqlServerInvocation(message, excludedConnectionIds);
+        return new PostgresInvocation(message, excludedConnectionIds);
     }
 
-    public SqlServerTargetedInvocation ReadTargetedInvocation(ReadOnlyMemory<byte> data)
+    public PostgresTargetedInvocation ReadTargetedInvocation(ReadOnlyMemory<byte> data)
     {
         // See WriteInvocation for the format
         var reader = new MessagePackReader(data);
@@ -152,7 +152,7 @@ internal class PostgresProtocol
 
         var invocation = ReadInvocationCore(ref reader);
 
-        return new SqlServerTargetedInvocation(target, invocation);
+        return new PostgresTargetedInvocation(target, invocation);
     }
 
     public byte[] WriteAck(int messageId, string serverName)
@@ -179,18 +179,18 @@ internal class PostgresProtocol
         }
     }
 
-    public SqlServerAckMessage ReadAck(ReadOnlyMemory<byte> data)
+    public PostgresAckMessage ReadAck(ReadOnlyMemory<byte> data)
     {
         var reader = new MessagePackReader(data);
 
         // See WriteAck for format
         reader.ReadByte(); // Skip header
         ValidateArraySize(ref reader, 2, "Ack");
-        return new SqlServerAckMessage(reader.ReadInt32(), reader.ReadString()!);
+        return new PostgresAckMessage(reader.ReadInt32(), reader.ReadString()!);
     }
 
 
-    public byte[] WriteGroupCommand(SqlServerGroupCommand command)
+    public byte[] WriteGroupCommand(PostgresGroupCommand command)
     {
         // Written as a MessagePack 'arr' containing at least these items:
         // * An 'int': the Id of the command
@@ -222,7 +222,7 @@ internal class PostgresProtocol
         }
     }
 
-    public SqlServerGroupCommand ReadGroupCommand(ReadOnlyMemory<byte> data)
+    public PostgresGroupCommand ReadGroupCommand(ReadOnlyMemory<byte> data)
     {
         var reader = new MessagePackReader(data);
 
@@ -237,7 +237,7 @@ internal class PostgresProtocol
         var groupName = reader.ReadString()!;
         var connectionId = reader.ReadString()!;
 
-        return new SqlServerGroupCommand(id, serverName, action, groupName, connectionId);
+        return new PostgresGroupCommand(id, serverName, action, groupName, connectionId);
     }
 
 
