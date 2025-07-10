@@ -23,10 +23,9 @@ string connectionString = builder.Configuration.GetConnectionString("Default")!;
 builder.Services.AddSingleton<IUserIdProvider, UserIdProvider>();
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR()
-    .AddSqlServer(o =>
+    .AddPostgres(o =>
     {
         o.ConnectionString = connectionString;
-        o.AutoEnableServiceBroker = true;
         o.TableSlugGenerator = hubType => hubType.Name;
         o.TableCount = 1;
         o.SchemaName = "SignalRCore";
