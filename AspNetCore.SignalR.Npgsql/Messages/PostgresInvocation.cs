@@ -2,7 +2,7 @@
 namespace AspNetCore.SignalR.Npgsql.Messages
 {
 
-    internal readonly struct SqlServerInvocation
+    internal readonly struct PostgresInvocation
     {
         /// <summary>
         /// Gets a list of connections that should be excluded from this invocation.
@@ -15,7 +15,7 @@ namespace AspNetCore.SignalR.Npgsql.Messages
         /// </summary>
         public SerializedHubMessage Message { get; }
 
-        public SqlServerInvocation(SerializedHubMessage message, IReadOnlyList<string>? excludedConnectionIds)
+        public PostgresInvocation(SerializedHubMessage message, IReadOnlyList<string>? excludedConnectionIds)
         {
             Message = message;
             ExcludedConnectionIds = excludedConnectionIds;
