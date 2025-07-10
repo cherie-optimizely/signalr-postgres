@@ -13,7 +13,7 @@ using IntelliTect.AspNetCore.SignalR.SqlServer;
 using Microsoft.Extensions.Logging;
 using Microsoft.Data.SqlClient;
 
-namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal
+namespace IntelliTect.AspNetCore.SignalR.SqlServer.Internal.SqlServer
 {
     internal class SqlReceiver : IDisposable
     {

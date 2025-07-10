@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+		<TargetFrameworks>net8.0</TargetFrameworks>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
 		<!-- Sourcelink: -->
@@ -16,6 +16,7 @@
 		
 		<PackageReference Include="MessagePack" Version="2.5.187" />
 		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+		<PackageReference Include="Npgsql" Version="6.0.11" />
 	</ItemGroup>
 
 	<ItemGroup>

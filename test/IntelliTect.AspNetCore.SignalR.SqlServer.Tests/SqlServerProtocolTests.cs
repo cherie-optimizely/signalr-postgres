@@ -1,13 +1,8 @@
 using IntelliTect.AspNetCore.SignalR.SqlServer.Internal;
 using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Messages;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.AspNetCore.SignalR.Internal;
 using Microsoft.AspNetCore.SignalR.Protocol;
-using Microsoft.Extensions.Logging.Abstractions;
-using System;
 using System.Buffers;
-using System.Collections.Generic;
-using System.Linq;
 using Xunit;
 
 namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests

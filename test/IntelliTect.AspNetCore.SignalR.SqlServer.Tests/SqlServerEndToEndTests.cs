@@ -1,13 +1,7 @@
-﻿using IntelliTect.AspNetCore.SignalR.SqlServer.Internal;
-using Microsoft.Data.SqlClient;
+﻿using IntelliTect.AspNetCore.SignalR.SqlServer.Internal.Postgres;
 using Microsoft.Extensions.Logging.Abstractions;
-using System;
+using Npgsql;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
@@ -15,10 +9,14 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
     public class SqlServerEndToEndTests
     {
         private const string databaseName = "SignalRUnitTestsDb";
-        private const string connectionString = 
-            "Server=localhost;Database=" + databaseName + ";Trusted_Connection=True;Timeout=5;TrustServerCertificate=True";
+        private const string username = "postgres";
 
-        [SkippableFact]
+        private const string password = "Pa55word";
+        private const string connectionString = 
+            // "Server=localhost,1433;Database=" + databaseName + ";User Id=sa;Password=" + password + ";TrustServerCertificate=true";
+            "Host=34.52.228.243:5432;Username=" + username + ";Password=" + password + ";Database=" + databaseName + ";";
+
+        [Fact(Skip = "Not supported.")]
         public async Task CanSendAndReceivePayloads_WithServiceBroker()
         {
             await CreateDatabaseAsync();
@@ -50,7 +48,7 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
         }
 
 
-        [SkippableFact]
+        [Fact(Skip = "Not supported.")]
         public async Task CanSendAndReceivePayloads_WithServiceBroker_UnderHeavyLoad()
         {
             await CreateDatabaseAsync();
@@ -148,23 +146,26 @@ namespace IntelliTect.AspNetCore.SignalR.SqlServer.Tests
 
         private static async Task CreateDatabaseAsync()
         {
-            try
-            {
-                using var connection = new SqlConnection(connectionString.Replace(databaseName, "master"));
-                await connection.OpenAsync();
-                using var command = connection.CreateCommand();
-                command.CommandText = $@"IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '{databaseName}')
-                    BEGIN CREATE DATABASE {databaseName}; END";
-                await command.ExecuteNonQueryAsync();
-            }
-            catch (SqlException ex) when (
-                ex.Number == 53 
-                || ex.Message.Contains("Could not open a connection to SQL Server")
-                || ex.Message.Contains("The server was not found or was not accessible")
-            )
-            {
-                Skip.If(true, ex.Message);
-            }
+        //     try
+        //     {
+        //         var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        //         var dataSource = dataSourceBuilder.Build();
+
+        //         var connection = await dataSource.OpenConnectionAsync();
+        //         await connection.OpenAsync();
+        //         using var command = connection.CreateCommand();
+        //         command.CommandText = $@"IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '{databaseName}')
+        //             BEGIN CREATE DATABASE {databaseName}; END";
+        //         await command.ExecuteNonQueryAsync();
+        //     }
+        //     catch (SqlException ex) when (
+        //         ex.Number == 53 
+        //         || ex.Message.Contains("Could not open a connection to SQL Server")
+        //         || ex.Message.Contains("The server was not found or was not accessible")
+        //     )
+        //     {
+        //         Skip.If(true, ex.Message);
+        //     }
         }
     }
 }
