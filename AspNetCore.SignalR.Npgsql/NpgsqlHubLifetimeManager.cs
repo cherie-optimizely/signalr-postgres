@@ -21,7 +21,7 @@ public class NpgsqlHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposa
     where THub : Hub
 {
     private readonly ILogger<NpgsqlHubLifetimeManager<THub>> _logger;
-    private readonly IOptions<NpgsqlOption> _options;
+    private readonly IOptions<PostgresOptions> _options;
     private readonly PostgresProtocol _protocol;
 
     private readonly string _serverName = GenerateServerName();
@@ -53,7 +53,7 @@ public class NpgsqlHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposa
     /// <exception cref="InvalidOperationException">Thrown when ConnectionString is not provided in options.</exception>
     public NpgsqlHubLifetimeManager(
         ILogger<NpgsqlHubLifetimeManager<THub>> logger,
-        IOptions<NpgsqlOption> options,
+        IOptions<PostgresOptions> options,
         IHostApplicationLifetime lifetime,
         IHubProtocolResolver hubProtocolResolver,
         IOptions<HubOptions>? globalHubOptions,

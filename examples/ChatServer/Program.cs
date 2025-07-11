@@ -20,7 +20,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? "Host=localhost;Database=signalr_demo;Username=postgres;Password=postgres";
 
 builder.Services.AddSignalR()
-    .AddNpgsql(connectionString, options =>
+    .AddPostgres(connectionString, options =>
     {
         options.SchemaName = "signalr";
         options.TableSlugGenerator = hubType => hubType.Name.ToLowerInvariant();
