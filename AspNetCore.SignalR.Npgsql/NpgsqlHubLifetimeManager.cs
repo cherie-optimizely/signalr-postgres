@@ -21,7 +21,7 @@ public class NpgsqlHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposa
     where THub : Hub
 {
     private readonly ILogger<NpgsqlHubLifetimeManager<THub>> _logger;
-    private readonly IOptions<NpgsqlOption> _options;
+    private readonly IOptions<PostgresOptions> _options;
     private readonly PostgresProtocol _protocol;
 
     private readonly string _serverName = GenerateServerName();
@@ -53,7 +53,7 @@ public class NpgsqlHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposa
     /// <exception cref="InvalidOperationException">Thrown when ConnectionString is not provided in options.</exception>
     public NpgsqlHubLifetimeManager(
         ILogger<NpgsqlHubLifetimeManager<THub>> logger,
-        IOptions<NpgsqlOption> options,
+        IOptions<PostgresOptions> options,
         IHostApplicationLifetime lifetime,
         IHubProtocolResolver hubProtocolResolver,
         IOptions<HubOptions>? globalHubOptions,
@@ -307,7 +307,7 @@ public class NpgsqlHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposa
         var id = Interlocked.Increment(ref _internalId);
         var ack = _ackHandler.CreateAck(id);
         // Send Add/Remove Group to other servers and wait for an ack or timeout
-        var message = _protocol.WriteGroupCommand(new SqlServerGroupCommand(id, _serverName, action, groupName, connectionId));
+        var message = _protocol.WriteGroupCommand(new PostgresGroupCommand(id, _serverName, action, groupName, connectionId));
         await PublishAsync(MessageType.Group, message);
 
         await ack;
@@ -736,7 +736,7 @@ public class NpgsqlHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposa
     /// <param name="invocation">The invocation to execute.</param>
     /// <param name="connections">The connections to send the invocation to.</param>
     /// <returns>A task that represents the execution operation.</returns>
-    private static async Task ExecuteInvocation(SqlServerInvocation invocation, HubConnectionStore? connections)
+    private static async Task ExecuteInvocation(PostgresInvocation invocation, HubConnectionStore? connections)
     {
         if (connections == null) return;
         var tasks = new List<Task>(connections.Count);

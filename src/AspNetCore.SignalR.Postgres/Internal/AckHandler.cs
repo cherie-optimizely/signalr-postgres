@@ -1,9 +1,13 @@
+// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+
 using System.Collections.Concurrent;
-namespace AspNetCore.SignalR.Npgsql.Internal;
+
+namespace AspNetCore.SignalR.Postgres.Internal;
 
 internal class AckHandler : IDisposable
 {
-    private readonly ConcurrentDictionary<int, AckInfo> _acks = new();
+    private readonly ConcurrentDictionary<int, AckInfo> _acks = new ConcurrentDictionary<int, AckInfo>();
     private readonly Timer _timer;
     private readonly TimeSpan _ackThreshold = TimeSpan.FromSeconds(30);
     private readonly TimeSpan _ackInterval = TimeSpan.FromSeconds(5);
