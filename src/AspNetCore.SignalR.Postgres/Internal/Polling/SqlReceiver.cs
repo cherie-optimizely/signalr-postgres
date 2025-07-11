@@ -24,8 +24,6 @@ namespace AspNetCore.SignalR.Postgres.Internal.Polling
         private readonly static TimeSpan _dependencyTimeout = TimeSpan.FromSeconds(60);
 
         private CancellationTokenSource _cts = new();
-        private bool _notificationsDisabled;
-
         private readonly PostgresOptions _options;
         private readonly string _tableName;
         private readonly ILogger _logger;

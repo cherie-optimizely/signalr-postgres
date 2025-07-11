@@ -11,6 +11,6 @@
         {
             Target = target;
             Invocation = invocation;
-        }
+        }-
     }
 }

@@ -20,7 +20,7 @@ internal class PostgresProtocol
         _messageSerializer = messageSerializer;
     }
 
-    // The SQL Server Protocol:
+    // The Postgres Protocol:
     // * Mirrored after the Redis protocol.
     // * The message type is the first byte of the payload. (enum MessageType). 
     // * See the Write[type] methods for a description of the protocol for each in-depth.
