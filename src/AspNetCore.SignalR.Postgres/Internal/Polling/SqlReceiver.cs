@@ -89,7 +89,7 @@ namespace AspNetCore.SignalR.Postgres.Internal.Polling
         /// </summary>
         // private async Task NotificationLoop(CancellationToken cancellationToken)
         // {
-           
+
         // }
 
         /// <summary>
@@ -167,7 +167,7 @@ namespace AspNetCore.SignalR.Postgres.Internal.Polling
                 {
                     var id = await command.ExecuteScalarAsync();
                     if (id is null) throw new Exception($"Unable to retrieve the starting payload ID for table \"Messages\"");
-                    return (int) id;
+                    return (int)id;
                 }
             }
             catch (Exception ex)
