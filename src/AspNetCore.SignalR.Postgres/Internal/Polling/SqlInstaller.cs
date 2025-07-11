@@ -22,9 +22,10 @@ namespace AspNetCore.SignalR.Postgres.Internal.Polling
             logger.LogInformation("{HubName}: Start installing SignalR SQL postgres objects", tracePrefix);
             try
             {
-                await using var connection = new NpgsqlConnection(options.ConnectionString);
+                var dataSourceBuilder = new NpgsqlDataSourceBuilder(options.ConnectionString);
+                var dataSource = dataSourceBuilder.Build();
 
-                await connection.OpenAsync();
+                var connection = await dataSource.OpenConnectionAsync();
 
                 if (options.AutoInstallSchema)
                 {

@@ -158,8 +158,10 @@ namespace AspNetCore.SignalR.Postgres.Internal.Polling
             try
             {
                 var script = GetType().Assembly.StringResource("latestId.sql");
-                await using var connection = new NpgsqlConnection(_options.ConnectionString);
-                await connection.OpenAsync();
+                var dataSourceBuilder = new NpgsqlDataSourceBuilder(_options.ConnectionString);
+                var dataSource = dataSourceBuilder.Build();
+
+                var connection = await dataSource.OpenConnectionAsync();
 
                 await using (var command = new NpgsqlCommand(script, connection))
                 {
@@ -186,8 +188,10 @@ namespace AspNetCore.SignalR.Postgres.Internal.Polling
 
             var script = GetType().Assembly.StringResource("read.sql");
 
-            await using var connection = new NpgsqlConnection(_options.ConnectionString);
-            await connection.OpenAsync();
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(_options.ConnectionString);
+            var dataSource = dataSourceBuilder.Build();
+
+            var connection = await dataSource.OpenConnectionAsync();
             await using var command = new NpgsqlCommand(script, connection);
             command.Parameters.AddWithValue("p", _lastPayloadId ?? 0);
             await using var reader = await command.ExecuteReaderAsync();

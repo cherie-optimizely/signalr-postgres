@@ -21,9 +21,10 @@ namespace AspNetCore.SignalR.Postgres.Internal.Polling
 
         public async Task Send(byte[] message)
         {
-            await using var connection = new NpgsqlConnection(_options.ConnectionString);
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(_options.ConnectionString);
+            var dataSource = dataSourceBuilder.Build();
 
-            await connection.OpenAsync();
+            var connection = await dataSource.OpenConnectionAsync();
 
             await using (var command = new NpgsqlCommand(_insertDml, connection))
             {

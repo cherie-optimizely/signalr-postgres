@@ -16,7 +16,7 @@
 		
 		<PackageReference Include="MessagePack" Version="2.5.187" />
 		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
-		<PackageReference Include="Npgsql" Version="6.0.11" />
+        <PackageReference Include="Npgsql" Version="9.0.3" />
 	</ItemGroup>
 
 	<ItemGroup>
