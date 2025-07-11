@@ -20,11 +20,11 @@ namespace AspNetCore.SignalR.Postgres.Internal
                 "Publishing {Type} message to Postgres.");
 
         private static readonly Action<ILogger, Exception> _internalMessageFailed =
-            LoggerMessage.Define(LogLevel.Warning, new EventId(3, "InternalMessageFailed"), 
+            LoggerMessage.Define(LogLevel.Warning, new EventId(3, "InternalMessageFailed"),
                 "Error processing message for internal server message.");
 
         private static readonly Action<ILogger, byte, string, string, Exception?> _unexpectedNotificationType =
-            LoggerMessage.Define<byte, string, string>(LogLevel.Warning, new EventId(4, "UnexpectedNotificationType"), 
+            LoggerMessage.Define<byte, string, string>(LogLevel.Warning, new EventId(4, "UnexpectedNotificationType"),
                 "An unexpected SqlNotificationType was received. Details: Type={Type}, Source={Source}, Info={Info}.");
 
 
